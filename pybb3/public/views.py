@@ -13,7 +13,11 @@ from pybb3.user.forms import RegisterForm
 from pybb3.utils import flash_errors
 from pybb3.database import db
 
-blueprint = Blueprint('public', __name__, static_folder="../static")
+blueprint = Blueprint(
+    'public', __name__,
+    static_folder="../static", template_folder='../templates/public'
+)
+
 
 @login_manager.user_loader
 def load_user(id):
@@ -32,9 +36,10 @@ def home():
             return redirect(redirect_url)
         else:
             flash_errors(form)
-    return render_template("public/home.html", form=form)
+    return render_template("home.html", form=form)
 
-@blueprint.route('/logout/')
+
+@blueprint.route('/logout')
 @login_required
 def logout():
     logout_user()
@@ -53,9 +58,10 @@ def register():
         return redirect(url_for('public.home'))
     else:
         flash_errors(form)
-    return render_template('public/register.html', form=form)
+    return render_template('register.html', form=form)
 
-@blueprint.route("/about/")
+
+@blueprint.route("/about")
 def about():
     form = LoginForm(request.form)
-    return render_template("public/about.html", form=form)
+    return render_template("about.html", form=form)

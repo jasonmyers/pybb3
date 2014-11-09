@@ -22,10 +22,12 @@ def app():
 
     ctx.pop()
 
+
 @pytest.fixture(scope='session')
 def testapp(app):
     """A Webtest app."""
     return TestApp(app)
+
 
 @pytest.yield_fixture(scope='function')
 def db(app):
