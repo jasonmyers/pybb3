@@ -1,32 +1,33 @@
+from __future__ import unicode_literals
+
 from flask_wtf import Form
-from wtforms import TextField, PasswordField
+from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired
 
 from pybb3.user.models import User
 
+
 class LoginForm(Form):
-    username = TextField('Username', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
 
-    def __init__(self, *args, **kwargs):
-        super(LoginForm, self).__init__(*args, **kwargs)
-        self.user = None
-
     def validate(self):
-        initial_validation = super(LoginForm, self).validate()
-        if not initial_validation:
+        if not super(LoginForm, self).validate():
             return False
 
-        self.user = User.query.filter_by(username=self.username.data).first()
-        if not self.user:
-            self.username.errors.append('Unknown username')
-            return False
-
-        if not self.user.check_password(self.password.data):
-            self.password.errors.append('Invalid password')
+        if not self.user or not self.user.check_password(self.password.data):
+            self.username.errors.append('Invalid username or password')
             return False
 
         if not self.user.active:
             self.username.errors.append('User not activated')
             return False
         return True
+
+    @property
+    def user(self):
+        if self._user is False and self.username.data:
+            self._user = User.get(username=self.username.data)
+
+        return self._user
+    _user = False  # False until checked then None or User()

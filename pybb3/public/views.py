@@ -20,11 +20,13 @@ blueprint = Blueprint(
 
 
 @login_manager.user_loader
+@db.session
 def load_user(id):
-    return User.get_by_id(int(id))
+    return User[id]
 
 
 @blueprint.route("/", methods=["GET", "POST"])
+@db.session
 def home():
     form = LoginForm(request.form)
     # Handle logging in
@@ -46,14 +48,18 @@ def logout():
     flash('You are logged out.', 'info')
     return redirect(url_for('public.home'))
 
-@blueprint.route("/register/", methods=['GET', 'POST'])
+
+@blueprint.route("/register", methods=['GET', 'POST'])
+@db.session
 def register():
     form = RegisterForm(request.form, csrf_enabled=False)
     if form.validate_on_submit():
-        new_user = User.create(username=form.username.data,
-                        email=form.email.data,
-                        password=form.password.data,
-                        active=True)
+        new_user = User(
+            username=form.username.data,
+            email=form.email.data,
+            password=form.password.data,
+            active=True
+        )
         flash("Thank you for registering. You can now log in.", 'success')
         return redirect(url_for('public.home'))
     else:

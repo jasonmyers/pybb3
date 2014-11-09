@@ -33,11 +33,11 @@ def testapp(app):
 def db(app):
     _db.app = app
     with app.app_context():
-        _db.create_all()
+        _db.create_tables()
 
     yield _db
 
-    _db.drop_all()
+    _db.drop_all_tables(with_all_data=True)
 
 
 @pytest.fixture
