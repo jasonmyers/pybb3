@@ -1,0 +1,6 @@
+# Not required but helpful for development
+-r dev.txt
+
+pygments
+ipython
+ipdb
