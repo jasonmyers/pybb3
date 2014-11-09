@@ -2,6 +2,8 @@
 from __future__ import unicode_literals
 
 from pony.orm import *
+
+from . import mod
 from .extensions import db
 
 
