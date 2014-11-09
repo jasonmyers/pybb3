@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from flask.ext.login import UserMixin
 
+from pybb3 import mod
 from pybb3.extensions import bcrypt
 from pybb3.database import (
     db, Required, Optional, Set, PrimaryKey, Choices,
@@ -13,10 +14,10 @@ from pybb3.database import (
 )
 
 
-
+@mod.extendable
 class User(UserMixin, db.Entity):
 
-
+    @mod.extendable
     class UserType(Choices(int, INT.TINYINT)):
         NORMAL = 0
         INACTIVE = 1
@@ -53,7 +54,7 @@ class User(UserMixin, db.Entity):
 
     login_attempts = Required(int, size=INT.TINYINT, default=0, column='user_login_attempts')
 
-
+    @mod.extendable
     class UserInactiveReason(Choices(int, INT.TINYINT)):pass
     inactive_reason = Optional(int, size=INT.TINYINT, py_check=UserInactiveReason, column='user_inactive_reason')
     inactive_time = Optional(datetime.datetime, column='user_inactive_time')
