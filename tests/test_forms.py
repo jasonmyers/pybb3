@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-import pytest
+from __future__ import unicode_literals
 
 from pybb3.public.forms import LoginForm
 from pybb3.user.forms import RegisterForm
-from .factories import UserFactory
+
 
 class TestRegisterForm:
 
     def test_validate_user_already_registered(self, user):
         # Enters username that is already registered
-        form = RegisterForm(username=user.username, email='foo@bar.com',
+        form = RegisterForm(
+            username=user.username, email='foo@bar.com',
             password='example', confirm='example')
 
         assert form.validate() is False
@@ -17,14 +18,16 @@ class TestRegisterForm:
 
     def test_validate_email_already_registered(self, user):
         # enters email that is already registered
-        form = RegisterForm(username='unique', email=user.email,
+        form = RegisterForm(
+            username='unique', email=user.email,
             password='example', confirm='example')
 
         assert form.validate() is False
         assert 'Email already registered' in form.email.errors
 
     def test_validate_success(self, db):
-        form = RegisterForm(username='newusername', email='new@test.test',
+        form = RegisterForm(
+            username='newusername', email='new@test.test',
             password='example', confirm='example')
         assert form.validate() is True
 

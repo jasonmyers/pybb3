@@ -2,7 +2,7 @@
 pybb3
 ===============================
 
-A Python alternative to phpBB3
+A Python alternative to phpbb3
 
 
 Quickstart

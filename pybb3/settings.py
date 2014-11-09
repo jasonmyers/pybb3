@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import os
 
 os_env = os.environ
+
 
 class Config(object):
     SECRET_KEY = os_env.get('PYBB3_SECRET', 'secret-key')  # TODO: Change me

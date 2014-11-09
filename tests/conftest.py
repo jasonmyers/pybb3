@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Defines fixtures available to all tests."""
-import os
+from __future__ import unicode_literals
 
 import pytest
 from webtest import TestApp
@@ -10,6 +10,7 @@ from pybb3.app import create_app
 from pybb3.database import db as _db
 
 from .factories import UserFactory
+
 
 @pytest.yield_fixture(scope='function')
 def app():

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 from flask.ext.assets import Bundle, Environment
 
 css = Bundle(

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Model unit tests."""
-import datetime as dt
+from __future__ import unicode_literals
 
-import pytest
+import datetime
 
 from pybb3.user.models import User, Role
 from .factories import UserFactory
@@ -21,7 +21,7 @@ class TestUser:
         user = User(username='foo', email='foo@bar.com')
         user.save()
         assert bool(user.created_at)
-        assert isinstance(user.created_at, dt.datetime)
+        assert isinstance(user.created_at, datetime.datetime)
 
     def test_password_is_nullable(self):
         user = User(username='foo', email='foo@bar.com')

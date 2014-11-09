@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 from pybb3.app import create_app
 from pybb3.settings import ProdConfig, DevConfig
+
 
 def test_production_config():
     app = create_app(ProdConfig)

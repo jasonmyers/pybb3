@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-'''The app module, containing the app factory function.'''
+"""The app module, containing the app factory function."""
+from __future__ import unicode_literals
+
 from flask import Flask, render_template
 
 from pybb3.settings import ProdConfig
@@ -16,16 +18,17 @@ from pybb3 import public, user
 
 
 def create_app(config_object=ProdConfig):
-    '''An application factory, as explained here:
+    """An application factory, as explained here:
         http://flask.pocoo.org/docs/patterns/appfactories/
 
     :param config_object: The configuration object to use.
-    '''
+    """
     app = Flask(__name__)
     app.config.from_object(config_object)
     register_extensions(app)
     register_blueprints(app)
     register_errorhandlers(app)
+
     return app
 
 
