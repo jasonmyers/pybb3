@@ -1,0 +1,75 @@
+<table>
+  <thead>
+    <tr>
+      <th>count</th>
+      <th>cache hits</th>
+      <th>min (ms)</th>
+      <th>avg (ms)</th>
+      <th>max (ms)</th>
+      <th>sum (ms)</th>
+      <th>Action</th>
+      {#<th>Context</th>#}
+      <th>Query</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for query in queries %}
+      <tr class="{{ loop.cycle('flDebugOdd', 'flDebugEven') }}">
+        <td>{{ query.db_hits }}</td>
+        <td>{% if query.cache_hits %}{{ query.cache_hits }}{% endif %}</td>
+        <td>{% if query.db_hits > 1 %}{{ '%.4f'|format(query.min_time * 1000) }}{% endif %}</td>
+        <td>{% if query.db_hits > 1 %}{{ '%.4f'|format(query.avg_time * 1000) }}{% endif %}</td>
+        <td>{% if query.db_hits > 1 %}{{ '%.4f'|format(query.max_time * 1000) }}{% endif %}</td>
+        <td>{{ '%.4f'|format(query.sum_time * 1000) }}</td>
+        <td>
+        {% if query.signed_query %}
+          <a class="remoteCall" href="/_debug_toolbar/views/pony/sql_select?query={{ query.signed_query }}&amp;duration={{ query.avg_time|urlencode }}">SELECT</a><br />
+          <a class="remoteCall" href="/_debug_toolbar/views/pony/sql_explain?query={{ query.signed_query }}&amp;duration={{ query.avg_time|urlencode }}">EXPLAIN</a><br />
+        {% endif %}
+        </td>
+        {#
+        <td title="{{ query.context_long }}">
+                    {{ query.context }}
+        </td>
+        #}
+        <td class="syntax">
+          <div class="flDebugSqlWrap">
+            <div class="flDebugSql">{{ query.sql|safe }}</div>
+            {#
+            {% if query.stacktrace %}
+            <div class="djSQLHideStacktraceDiv" style="display:none;">
+              <table>
+                <tr>
+                  <th>{% trans "Line" %}</th>
+                  <th>{% trans "Method" %}</th>
+                  <th>{% trans "File" %}</th>
+                </tr>
+                {% for file, line, method in query.stacktrace %}
+                  <tr>
+                    <td>{{ line }}</td>
+                    <td><code>{{ method|escape }}</code></td>
+                    <td><code>{{ file|escape }}</code></td>
+                  </tr>
+                {% endfor %}
+              </table>
+              {% if query.template_info %}
+              <table>
+                {% for line in query.template_info.context %}
+                <tr>
+                  <td>{{ line.num }}</td>
+                  <td><code style="font-family: monospace;{% if line.highlight %}background-color: lightgrey{% endif %}">{{ line.content }}</code></td>
+                </tr>
+                {% endfor %}
+              </table>
+              <p><strong>{{ query.template_info.name|default:"(unknown)" }}</strong></p>
+              {% endif %}
+            </div>
+            {% endif %}
+            <span class="djDebugLineChart{% if query.is_slow %} djDebugLineChartWarning{% endif %}" style="width:{{ query.width_ratio }}%; left:{{ query.start_offset }}%;"></span>
+            #}
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

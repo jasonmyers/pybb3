@@ -84,3 +84,8 @@ footer .footer-nav {
   margin-right: 25px;
   list-style: none;
 }
+
+div.flDebugPanelTitle > a {
+    text-indent: 0 !important;
+    color: transparent !important;
+}
