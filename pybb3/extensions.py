@@ -12,8 +12,8 @@ login_manager = LoginManager()
 from flask.ext.sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
-from flask.ext.migrate import Migrate
-migrate = Migrate()
+#from flask.ext.migrate import Migrate
+#migrate = Migrate()
 
 from flask.ext.cache import Cache
 cache = Cache()

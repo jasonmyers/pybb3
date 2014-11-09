@@ -11,7 +11,6 @@ from pybb3.extensions import (
     cache,
     db,
     login_manager,
-    migrate,
     debug_toolbar,
 )
 from pybb3 import public, user
@@ -39,14 +38,11 @@ def register_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
     debug_toolbar.init_app(app)
-    migrate.init_app(app, db)
-    return None
 
 
 def register_blueprints(app):
     app.register_blueprint(public.views.blueprint)
     app.register_blueprint(user.views.blueprint)
-    return None
 
 
 def register_errorhandlers(app):
@@ -56,4 +52,3 @@ def register_errorhandlers(app):
         return render_template("{0}.html".format(error_code)), error_code
     for errcode in [401, 404, 500]:
         app.errorhandler(errcode)(render_error)
-    return None

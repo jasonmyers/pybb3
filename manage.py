@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 import os
 
 from flask.ext.script import Manager, Shell, Server
-from flask.ext.migrate import MigrateCommand
 
 from pybb3.app import create_app
 from pybb3.user.models import User
@@ -38,7 +37,6 @@ def test():
 
 manager.add_command('server', Server())
 manager.add_command('shell', Shell(make_context=_make_context))
-manager.add_command('db', MigrateCommand)
 
 
 if __name__ == '__main__':
