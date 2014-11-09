@@ -15,5 +15,8 @@ db = Pony()
 from flask.ext.cache import Cache
 cache = Cache()
 
+from flask.ext.wtf import CsrfProtect
+csrf = CsrfProtect
+
 from flask.ext.debugtoolbar import DebugToolbarExtension
 debug_toolbar = DebugToolbarExtension()

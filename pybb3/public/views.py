@@ -52,7 +52,7 @@ def logout():
 @blueprint.route("/register", methods=['GET', 'POST'])
 @db.session
 def register():
-    form = RegisterForm(request.form, csrf_enabled=False)
+    form = RegisterForm(request.form)
     if form.validate_on_submit():
         new_user = User(
             username=form.username.data,

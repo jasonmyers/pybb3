@@ -9,6 +9,7 @@ from pybb3.assets import assets
 from pybb3.extensions import (
     bcrypt,
     cache,
+    csrf,
     db,
     login_manager,
     debug_toolbar,
@@ -36,6 +37,7 @@ def register_extensions(app):
     assets.init_app(app)
     bcrypt.init_app(app)
     cache.init_app(app)
+    csrf.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)
     debug_toolbar.init_app(app)
