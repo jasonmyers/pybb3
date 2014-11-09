@@ -14,6 +14,7 @@ from pybb3.extensions import (
     debug_toolbar,
 )
 from pybb3 import public, user
+from pybb3 import patches
 
 
 def create_app(config_object=ProdConfig):
