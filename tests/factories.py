@@ -2,16 +2,17 @@
 from __future__ import unicode_literals
 
 from factory import Sequence, PostGenerationMethodCall
-from factory.alchemy import SQLAlchemyModelFactory
+from .pony_factory import PonyModelFactory
 
 from pybb3.user.models import User
 from pybb3.database import db
 
-class BaseFactory(SQLAlchemyModelFactory):
+
+class BaseFactory(PonyModelFactory):
 
     class Meta:
         abstract = True
-        sqlalchemy_session = db.session
+        pony_session = db.session
 
 
 class UserFactory(BaseFactory):

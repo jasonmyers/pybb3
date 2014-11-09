@@ -4,33 +4,36 @@ from __future__ import unicode_literals
 
 import datetime
 
+from pybb3.database import db
 from pybb3.user.models import User, Role
 from .factories import UserFactory
 
-@pytest.mark.usefixtures('db')
+
 class TestUser:
 
     def test_get_by_id(self):
-        user = User('foo', 'foo@bar.com')
-        user.save()
+        with db.session:
+            user = User(username='foo', email='foo@bar.com')
 
-        retrieved = User.get_by_id(user.id)
-        assert retrieved == user
+        assert user.id == User[user.id].id
 
     def test_created_at_defaults_to_datetime(self):
-        user = User(username='foo', email='foo@bar.com')
-        user.save()
+        with db.session:
+            user = User(username='foo', email='foo@bar.com')
+
         assert bool(user.created_at)
         assert isinstance(user.created_at, datetime.datetime)
 
     def test_password_is_nullable(self):
-        user = User(username='foo', email='foo@bar.com')
-        user.save()
+        with db.session:
+            user = User(username='foo', email='foo@bar.com')
+
         assert user.password is None
 
-    def test_factory(self, db):
-        user = UserFactory(password="myprecious")
-        db.session.commit()
+    def test_factory(self):
+        with db.session:
+            user = UserFactory(password='myprecious')
+
         assert bool(user.username)
         assert bool(user.email)
         assert bool(user.created_at)
@@ -39,19 +42,24 @@ class TestUser:
         assert user.check_password('myprecious')
 
     def test_check_password(self):
-        user = User.create(username="foo", email="foo@bar.com",
-                    password="foobarbaz123")
+        with db.session:
+            user = User.create(
+                username='foo', email='foo@bar.com',
+                password='foobarbaz123')
+
         assert user.check_password('foobarbaz123') is True
-        assert user.check_password("barfoobaz") is False
+        assert user.check_password('barfoobaz') is False
 
     def test_full_name(self):
-        user = UserFactory(first_name="Foo", last_name="Bar")
-        assert user.full_name == "Foo Bar"
+        with db.session:
+            user = UserFactory(first_name='Foo', last_name='Bar')
+
+        assert user.full_name == 'Foo Bar'
 
     def test_roles(self):
-        role = Role(name='admin')
-        role.save()
-        u = UserFactory()
-        u.roles.append(role)
-        u.save()
-        assert role in u.roles
+        with db.session:
+            role = Role(name='admin')
+            user = UserFactory()
+            user.roles.add(role)
+
+        assert role in user.roles
