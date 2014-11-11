@@ -42,6 +42,7 @@ class ChoicesMeta(type):
 
         """
         choices = [(key, value) for key, value in cls_dict.items() if ChoicesMeta.valid_choices_key(key)]
+        values = []
         if choices:
             keys, values = zip(*choices)
             keys_set, values_set = set(keys), set(values)
@@ -50,7 +51,7 @@ class ChoicesMeta(type):
             value_types_set = {value.__class__.__mro__[-2] for value in values if value is not None}
             if len(value_types_set) > 1:
                 raise ValueError('All Choices values for {} must be of the same type. Found: {}'.format(
-                    mod.extended_class_name_pretty(name),
+                    mod.extended_object_name_pretty(name),
                     ', '.join(t.__name__ for t in value_types_set)
                 ))
 
@@ -62,7 +63,7 @@ class ChoicesMeta(type):
                 collision_errors.append(
                     'Choices value collision: {values} defined twice in {cls}'.format(
                         values=', '.join(repr(v) for v in value_collisions),
-                        cls=mod.extended_class_name_pretty(name),
+                        cls=mod.extended_object_name_pretty(name),
                     ))
 
             for base in bases:
@@ -77,8 +78,8 @@ class ChoicesMeta(type):
 
                 if len(value_types_set | base_value_types_set) > 1:
                     raise ValueError('All Choices values for {}({}) must be of the same type. Found: {}'.format(
-                        mod.extended_class_name_pretty(name),
-                        mod.extended_class_name_pretty(base),
+                        mod.extended_object_name_pretty(name),
+                        mod.extended_object_name_pretty(base),
                         ', '.join(t.__name__ for t in value_types_set | base_value_types_set)
                     ))
 
@@ -88,7 +89,7 @@ class ChoicesMeta(type):
                     collision_errors.append(
                         'Choices key collision: {keys} defined in both {cls} and {base}'.format(
                             keys=', '.join(repr(k) for k in key_collisions),
-                            cls=mod.extended_class_name_pretty(name),
+                            cls=mod.extended_object_name_pretty(name),
                             base=base.__name__,
                         ))
 
@@ -98,7 +99,7 @@ class ChoicesMeta(type):
                     collision_errors.append(
                         'Choices value collision: {values} defined in both {cls} and {base}'.format(
                             values=', '.join(repr(v) for v in value_collisions),
-                            cls=mod.extended_class_name_pretty(name),
+                            cls=mod.extended_object_name_pretty(name),
                             base=base.__name__,
                         ))
 
@@ -117,55 +118,68 @@ class ChoicesMeta(type):
     def __str__(cls):
         constraints = [
             constraint for constraint in [
-                cls._type and cls._type.__name__,
-                cls._size,
-                'unsigned' if cls._unsigned else None,
+                cls.type and cls.type.__name__,
+                cls.size,
+                'unsigned' if cls.unsigned else None,
             ] if constraint is not None]
         constraint_display = ''
         if constraints:
             constraint_display = '({})'.format(' '.join(str(c) for c in constraints))
         try:
-            options = ', '.join('{}={}'.format(key, value) for key, value in cls.options())
+            items = ', '.join('{}={}'.format(key, value) for key, value in cls.items())
         except TypeError:
-            options = ''
-        return "<{name}{constraints}: {options}>".format(
-            name=mod.extended_class_name_pretty(cls),
+            items = ''
+        return "<{name}{constraints}: {items}>".format(
+            name=mod.extended_object_name_pretty(cls),
             constraints=constraint_display,
-            options=options
+            items=items
         )
 
+    @property
+    def type(cls):
+        return cls._type
     _type = None
+
+    @property
+    def size(cls):
+        return cls._size
     _size = None
-    _unsigned = False
+
+    @property
+    def unsigned(cls):
+        return cls._unsigned
+    _unsigned = None
 
     @staticmethod
     def valid_choices_key(key):
         return key and key.isupper() and not key.startswith('_')
 
-    def options(cls):
-        if cls.__options is None:
-            cls.__options = [
-                (key, value)
-                for base in cls.__mro__
-                for key, value in base.__dict__.items()
-                if ChoicesMeta.valid_choices_key(key)
-            ]
-            if cls.__sort_key:
-                cls.__options = sorted(cls.__options, key=cls.__sort_key)
+    def items(cls):
+        if cls.__items is None:
+            cls.__items = sorted(
+                (
+                    (key, value)
+                    for base in cls.__mro__
+                    for key, value in base.__dict__.items()
+                    if ChoicesMeta.valid_choices_key(key)
+                ),
+                key=cls.sort_key,
+            )
+        return cls.__items
+    __items = None
 
-        return cls.__options
-    __sort_key = lambda self, kv: kv[1]
-    __options = None
+    def sort_key(cls, kv):
+        return kv[1]
 
     def keys(cls):
         if cls.__keys is None:
-            cls.__keys = [key for key, value in cls.options()]
+            cls.__keys = [key for key, value in cls.items()]
         return cls.__keys
     __keys = None
 
     def values(cls):
         if cls.__values is None:
-            cls.__values = [value for key, value in cls.options()]
+            cls.__values = [value for key, value in cls.items()]
         return cls.__values
     __values = None
 
@@ -181,21 +195,21 @@ class ChoicesMeta(type):
     def validate_constraints(cls, value):
         if value is None:
             return
-        if cls._type is not None:
-            if not isinstance(value, cls._type):
+        if cls.type is not None:
+            if not isinstance(value, cls.type):
                 raise ValueError('{} requires {} values, found {!r}'.format(
-                    cls, cls._type.__name__, value))
-        if cls._size is not None:
+                    cls, cls.type.__name__, value))
+        if cls.size is not None:
             cls.validate_size_constraint(value)
 
     def validate_size_constraint(cls, value):
-        if cls._type is str:
-            if not len(value) <= cls._size:
+        if cls.type is str:
+            if not len(value) <= cls.size:
                 raise ValueError('Max length for {} is {}, found {!r} (len={})'.format(
-                    cls, cls._size, value, len(value)
+                    cls, cls.size, value, len(value)
                 ))
-        if cls._type is int:
-            bits = cls._size * 2 if cls._unsigned else cls._size
+        if cls.type is int:
+            bits = cls.size * 2 if cls.unsigned else cls.size
             if not value.bit_length() < bits:
                 raise ValueError('Max bits for {} is {}, found {!r} (bits={})'.format(
                     cls, bits, value, value.bit_length()
@@ -204,7 +218,7 @@ class ChoicesMeta(type):
 
 class Choices(metaclass=ChoicesMeta):
 
-    def __new__(cls, type=None, size=None, unsigned=False):
+    def __new__(cls, type=None, size=None, unsigned=None):
         """ If you instantiate `Choices`, you'll get back another `Choices` class
             (not instance!) with the type/size/unsigned values set.
 
@@ -218,12 +232,19 @@ class Choices(metaclass=ChoicesMeta):
                 <class Choices(int 16)>
         """
         if type is None:
-            size = None
+            if size is not None:
+                raise ValueError('Choices size specified without a type')
+            if unsigned is not None:
+                raise ValueError('Choices undefined specified without a type')
+
+        if unsigned is None:
             unsigned = False
         if type is int and size is None:
             size = INT.INTEGER
-        if type is str and size is None:
-            size = 255
+        if type is str:
+            unsigned = None
+            if size is None:
+                size = 255
 
         cls_dict = dict(cls.__dict__)
         cls_dict['_type'] = type
