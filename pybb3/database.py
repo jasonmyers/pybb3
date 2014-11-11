@@ -21,7 +21,7 @@ table_prefix = 'pybb3'
 def table_name(table):
     return '{table_prefix}_{table_name}'.format(
         table_prefix=table_prefix,
-        table_name=table_name,
+        table_name=table,
     )
 
 
