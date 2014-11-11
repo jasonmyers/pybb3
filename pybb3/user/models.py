@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from flask.ext.login import UserMixin
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.extensions import bcrypt
 from pybb3.database import (
     db, Required, Optional, Set, PrimaryKey, Choices,

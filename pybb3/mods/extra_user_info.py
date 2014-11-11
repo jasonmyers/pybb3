@@ -4,7 +4,7 @@ Mod that adds extra info to user profiles (birthday, social media, etc)
 """
 from __future__ import unicode_literals
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import Optional, LongStr
 
 

@@ -7,6 +7,7 @@ from flask import Flask, render_template
 from pybb3.settings import ProdConfig
 from pybb3.assets import assets
 from pybb3.extensions import (
+    mod,
     bcrypt,
     cache,
     csrf,
@@ -34,6 +35,7 @@ def create_app(config_object=ProdConfig):
 
 
 def register_extensions(app):
+    mod.init_app(app)
     assets.init_app(app)
     bcrypt.init_app(app)
     cache.init_app(app)

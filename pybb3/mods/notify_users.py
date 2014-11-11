@@ -6,7 +6,7 @@ If Private Message Mod isinstalled, also allows notifications for PMs
 """
 from __future__ import unicode_literals
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import (
     db, Choices, INT, Required, Optional, Set, table_name,
 )

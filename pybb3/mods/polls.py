@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 
 import datetime
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import (
     db, Optional, INT, Required, LongStr, PrimaryKey, table_name, Set,
 )

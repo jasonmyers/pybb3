@@ -4,7 +4,7 @@ Mod to add post/topic/view counts to Forum/Topic views
 """
 from __future__ import unicode_literals
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import Required, INT
 
 

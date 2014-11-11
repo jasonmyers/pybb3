@@ -4,7 +4,7 @@ Mod to enable approvals before new topics become visible
 """
 from __future__ import unicode_literals
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import Required
 
 

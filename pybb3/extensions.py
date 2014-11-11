@@ -3,6 +3,9 @@
 in app.py
 """
 
+from .ext.mod import Mod
+mod = Mod()
+
 from flask.ext.bcrypt import Bcrypt
 bcrypt = Bcrypt()
 

@@ -4,6 +4,7 @@ Mod to add icons to topics and posts
 """
 from __future__ import unicode_literals
 
+from pybb3.mods import mod
 from pybb3.database import (
     db, Required, Optional, PrimaryKey, INT, table_name, Set
 )

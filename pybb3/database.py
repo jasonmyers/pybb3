@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+# For `from pybb3.database import <pony function>
 from pony.orm import *
 
-from . import mod
+
+# For `from pybb3.database import db`
 from .extensions import db
 
+from .mods import mod
 
+
+# Integer equivalents from pony
 class INT:
     TINYINT = 8         # 8 bit - TINYINT in MySQL
     SMALLINT = 16       # 16 bit - SMALLINT in MySQL

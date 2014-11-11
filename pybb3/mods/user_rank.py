@@ -5,7 +5,7 @@ Mod to enable user rankings
 from __future__ import unicode_literals
 
 
-from pybb3 import mod
+from pybb3.mods import mod
 from pybb3.database import db, Optional, PrimaryKey, Set, Required, INT, table_name
 
 

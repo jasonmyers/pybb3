@@ -6,13 +6,10 @@ from __future__ import unicode_literals
 
 import datetime
 
-from pybb3 import mod
-from pybb3.database import db, Optional, PrimaryKey, Required, LongStr, table_name
-
-
-@mod.extend('User')
-class BanlistModUser(object):
-    ban = Optional('BanList')
+from pybb3.mods import mod
+from pybb3.database import (
+    db, Optional, PrimaryKey, Required, LongStr, table_name, Set,
+)
 
 
 @mod.extendable

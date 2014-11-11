@@ -6,8 +6,8 @@ from __future__ import unicode_literals
 
 import datetime
 
-from pybb3 import mod
-from pybb3.database import Optional, Set, Required, PrimaryKey, table_name
+from pybb3.mods import mod
+from pybb3.database import db,  Optional, Set, Required, PrimaryKey, table_name
 
 
 mod.require('last_post')
