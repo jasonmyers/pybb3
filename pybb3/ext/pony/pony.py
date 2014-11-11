@@ -129,18 +129,19 @@ class Pony(object):
                 return clean()
 
             if self._exempt_db_session_views or self._exempt_db_session_blueprints:
-                if not request.endpoint:
+                if not endpoint:
                     return clean()
 
-                view = app.view_functions.get(request.endpoint)
-                if not view:
+                if not view_func:
                     return clean()
 
-                dest = '%s.%s' % (view.__module__, view.__name__)
+                dest = '%s.%s' % (view_func.__module__, view_func.__name__)
                 if dest in self._exempt_db_session_views:
                     return clean()
-                if request.blueprint in self._exempt_db_session_blueprints:
-                    return clean()
+
+                #blueprint = ??? # TODO figure out how to get blueprint from view
+                #if blueprint in self._exempt_db_session_blueprints:
+                #    return clean()
 
             return wrapped()
 

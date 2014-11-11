@@ -20,13 +20,11 @@ blueprint = Blueprint(
 
 
 @login_manager.user_loader
-@db.session
 def load_user(id):
     return User[id]
 
 
 @blueprint.route("/", methods=["GET", "POST"])
-@db.session
 def home():
     form = LoginForm(request.form)
     # Handle logging in
@@ -50,7 +48,6 @@ def logout():
 
 
 @blueprint.route("/register", methods=['GET', 'POST'])
-@db.session
 def register():
     form = RegisterForm(request.form)
     if form.validate_on_submit():
@@ -68,6 +65,7 @@ def register():
 
 
 @blueprint.route("/about")
+@db.exempt
 def about():
     form = LoginForm(request.form)
     return render_template("about.html", form=form)
