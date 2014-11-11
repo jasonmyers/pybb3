@@ -176,6 +176,7 @@ class Mod(object):
                 ))
         empty_subclass.__name__ = name
         self.extendable_registry[name] = empty_subclass
+        self.extendable_objects.add(empty_subclass)
 
         # We return an "empty" subclass of the decorated class, so that
         # it is usable in the immediate file.  Later we will replace the
