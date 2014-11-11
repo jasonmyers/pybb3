@@ -8,11 +8,6 @@ from pybb3.mods import mod
 from pybb3.database import db, Optional, PrimaryKey, table_name
 
 
-@mod.extend('User')
-class StyleModUser(object):
-    style = Optional('Style', column='user_style', reverse='users')
-
-
 @mod.extendable
 class Style(db.Entity):
     _table_ = table_name('styles')
@@ -24,3 +19,8 @@ class Style(db.Entity):
 
     def __repr__(self):
         return '<Style({id}: {name!r})>'.format(id=self.id, name=self.name)
+
+
+@mod.extend('User')
+class StyleModUser(object):
+    style = Optional('Style', column='user_style', reverse='users')

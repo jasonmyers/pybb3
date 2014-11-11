@@ -12,59 +12,15 @@ from pybb3.database import (
 )
 
 
-@mod.extend('User')
-class PrivateMessageModUser(object):
-
-    @mod.extendable
-    class UserFullFolder(Choices(int, INT.INTEGER)):
-        pass
-
-    new_privmsg = Required(int, INT.TINYINT, default=0, column='user_new_privmsg')
-    unread_privmsg = Required(int, INT.TINYINT, default=0, column='user_unread_privmsg')
-    last_privmsg = Optional(datetime.datetime, column='user_last_privmsg')
-    message_rules = Required(bool, default=False, column='user_message_rules')
-    full_folder = Optional(int, size=INT.INTEGER, column='user_full_folder')
-    allow_pm = Required(bool, default=True, column='user_allow_pm')
-
-    messages = Set('Message', reverse='author')
-    edit_messages = Set('Message', reverse='edit_user')
-
-
-if mod.installed('icons'):
-    @mod.extend('Icon')
-    class PrivateMessageModIcon(object):
-        messages = Optional('PrivateMessageModMessageIcon', reverse='icon')
-
-    @mod.extend('Message')
-    class PrivateMessageModMessageIcon(object):
-        icon = Optional('PrivateMessageModIcon', column='icon_id', reverse='messages')
-
-
-if mod.installed('attachments'):
-    @mod.extend('Message')
-    class PrivateMessageModMessageAttachment(object):
-        attachment = Required(bool, default=False, column='message_attachment')
-
-    @mod.extend('Attachment')
-    class PrivateMessageModAttachment(object):
-        in_message = Required(bool, default=False, column='in_message')
-
-
-if mod.installed('drafts'):
-    @mod.extend('Draft')
-    class PrivateMessageModDraft(object):
-        subject = Optional(str, 100, column='draft_subject')
-        message = Optional(LongStr, column='draft_message')
-
-
 @mod.extendable
 class Message(db.Entity):
     _table_ = table_name('privmsgs')
 
     id = PrimaryKey(int, auto=True, column='msg_id')
 
-    root_level = Optional('Message', column='root_level')
-    author = Required('PrivateMessageModUser', column='author_id', revserse='sent_messages')
+    root_level = Optional('Message', column='root_level', reverse='reply_tree')
+    reply_tree = Set('Message', reverse='root_level')
+    author = Required('PrivateMessageModUser', column='author_id', reverse='sent_messages')
 
     author_ip = Optional(str, 40, column='author_ip')
     time = Required(datetime.datetime, default=datetime.datetime.utcnow, column='message_time')
@@ -83,9 +39,9 @@ class Message(db.Entity):
     bbcode_uid = Optional(str, 5, column='bbcode_uid')
 
     edit_reason = Optional(str, column='message_edit_reason')
-    edit_user = Optional('User', reverse='edited_messages')
+    edit_user = Optional('PrivateMessageModUser', reverse='edited_messages')
     edit_time = Optional(datetime.datetime, column='message_edit_time')
-    edit_count = Optional(int, INT.SMALLINT, column='message_edit_count')
+    edit_count = Optional(int, size=INT.SMALLINT, column='message_edit_count')
 
     def __repr__(self):
         return '<Message({id}: {subject!r})>'.format(id=self.id, subject=self.subject)
@@ -97,7 +53,7 @@ class MessageFolder(db.Entity):
 
     id = PrimaryKey(int, auto=True, column='folder_id')
 
-    user = Required('User', column='user_id', reverse='message_folders')
+    user = Required('PrivateMessageModUser', column='user_id', reverse='message_folders')
     name = Optional(str, column='folder_name')
     pm_count = Required(int, size=INT.MEDIUMINT, default=0, column='pm_count')
 
@@ -113,8 +69,8 @@ class MessageTo(db.Entity):
 
     id = PrimaryKey(int, auto=True, column='msg_id')
 
-    user = Required('User', column='user_id', reverse='received_messages')
-    author = Required('User', column='author_id', reverse='author_messages')
+    user = Required('PrivateMessageModUser', column='user_id', reverse='received_messages')
+    author = Required('PrivateMessageModUser', column='author_id', reverse='author_messages')
 
     deleted = Required(bool, default=False, column='pm_deleted')
     new = Required(bool, default=True, column='pm_new')
@@ -128,3 +84,61 @@ class MessageTo(db.Entity):
     def __repr__(self):
         return '<MessageTo({id}: {author} -> {user})>'.format(
             id=self.id, author=self.author, user=self.user)
+
+
+@mod.extend('User')
+class PrivateMessageModUser(object):
+
+    new_privmsg = Required(int, size=INT.TINYINT, default=0, column='user_new_privmsg')
+    unread_privmsg = Required(int, size=INT.TINYINT, default=0, column='user_unread_privmsg')
+    last_privmsg = Optional(datetime.datetime, column='user_last_privmsg')
+    message_rules = Required(bool, default=False, column='user_message_rules')
+
+    @mod.extendable
+    class UserFullFolder(Choices(int, INT.INTEGER)):
+        pass
+    full_folder = Optional(int, size=INT.INTEGER, py_check=UserFullFolder.check, column='user_full_folder')
+
+    allow_pm = Required(bool, default=True, column='user_allow_pm')
+
+    sent_messages = Set('Message', reverse='author')
+    author_messages = Set('MessageTo', reverse='author')
+    received_messages = Set('MessageTo', reverse='user')
+    edited_messages = Set('Message', reverse='edit_user')
+    message_folders = Set('MessageFolder', reverse='user')
+
+
+@mod.extend('Group')
+class PrivateMessageModGroup(object):
+    receive_pm = Required(bool, default=False, column='group_receive_pm')
+    message_limit = Required(int, size=INT.MEDIUMINT, default=0, column='group_message_limit')
+
+
+@mod.installed('icons')
+def icons_installed():
+    @mod.extend('Icon')
+    class PrivateMessageModIcon(object):
+        messages = Optional('PrivateMessageModMessageIcon', reverse='icon')
+
+    @mod.extend('Message')
+    class PrivateMessageModMessageIcon(object):
+        icon = Optional('PrivateMessageModIcon', column='icon_id', reverse='messages')
+
+
+@mod.installed('attachments')
+def attachments_installed():
+    @mod.extend('Message')
+    class PrivateMessageModMessageAttachment(object):
+        attachment = Required(bool, default=False, column='message_attachment')
+
+    @mod.extend('Attachment')
+    class PrivateMessageModAttachment(object):
+        in_message = Required(bool, default=False, column='in_message')
+
+
+@mod.installed('drafts')
+def drafts_installed():
+    @mod.extend('Draft')
+    class PrivateMessageModDraft(object):
+        subject = Optional(str, 100, column='draft_subject')
+        message = Optional(LongStr, column='draft_message')

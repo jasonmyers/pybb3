@@ -12,6 +12,19 @@ from pybb3.database import (
 )
 
 
+@mod.extendable
+class Warning(db.Entity):
+    _table_ = table_name('warnings')
+
+    id = PrimaryKey(int, auto=True, column='warning_id')
+
+    user = Required('WarnUserModUser', column='user_id', reverse='warnings')
+    post = Required('WarnUserModPost', column='post_id', reverse='warning')
+    log = Optional('WarnUserModLog', column='log_id', reverse='warnings')
+
+    time = Required(datetime.datetime, default=datetime.datetime.utcnow, column='warning_time')
+
+
 @mod.extend('User')
 class WarnUserModUser(object):
     warning_count = Required(int, size=INT.TINYINT, default=0, column='user_warnings')
@@ -30,14 +43,3 @@ class WarnUserModLog(object):
     warnings = Set('Warning', reverse='log')
 
 
-@mod.extendable
-class Warning(db.Entity):
-    _table_ = table_name('warnings')
-
-    id = PrimaryKey(int, auto=True, column='warning_id')
-
-    user = Required('WarnUserModUser', column='user_id', reverse='warnings')
-    post = Required('WarnUserModPost', column='post_id', reverse='warning')
-    log = Optional('WarnUserModLog', column='log_id', reverse='warnings')
-
-    time = Required(datetime.datetime, default=datetime.datetime.utcnow, column='warning_time')

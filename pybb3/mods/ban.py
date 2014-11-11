@@ -15,9 +15,10 @@ from pybb3.database import (
 @mod.extendable
 class BanList(db.Entity):
     _table_ = table_name('banlist')
+
     id = PrimaryKey(int, auto=True, column='ban_id')
 
-    userid = Optional('User', column='ban_userid', reverse='ban')
+    user = Optional('BanListModUser', column='ban_userid', reverse='ban')
     ip = Optional(str, 40, column='ban_ip')
     email = Optional(str, 100, column='ban_email')
 
@@ -32,3 +33,8 @@ class BanList(db.Entity):
         return '<Banlist({id}: {name!r})>'.format(
             id=self.id, name=self.userid or self.ip or self.email
         )
+
+
+@mod.extend('User')
+class BanListModUser(object):
+    ban = Optional('BanList', reverse='user')

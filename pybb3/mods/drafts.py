@@ -13,11 +13,26 @@ class Draft(db.Entity):
 
     id = PrimaryKey(int, auto=True, column='draft_id')
 
-    user = Required('User', column='user_id', reverse='drafts')
-    topic = Optional('Topic', column='topic_id', reverse='draft')
-    forum = Optional('Forum', column='forum_id', reverse='fraft')
+    user = Required('DraftsModUser', column='user_id', reverse='drafts')
+    topic = Optional('DraftsModTopic', column='topic_id', reverse='drafts')
+    forum = Optional('DraftsModForum', column='forum_id', reverse='drafts')
 
     save_time = Required(datetime.datetime, default=datetime.datetime.utcnow, column='save_time')
 
     def __repr__(self):
         return '<Draft({id})>'.format(username=self.username)
+
+
+@mod.extend('User')
+class DraftsModUser(object):
+    drafts = Set('Draft', reverse='user')
+
+
+@mod.extend('Topic')
+class DraftsModTopic(object):
+    drafts = Set('Draft', reverse='topic')
+
+
+@mod.extend('Forum')
+class DraftsModForum(object):
+    drafts = Set('Draft', reverse='forum')

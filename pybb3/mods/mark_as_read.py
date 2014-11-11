@@ -13,27 +13,8 @@ from pybb3.database import db,  Optional, Set, Required, PrimaryKey, table_name
 mod.require('last_post')
 
 
-@mod.extend('User')
-class MarkAsReadModUser(object):
-    lastmark = Optional(datetime.datetime, column='user_lastmark')
-
-    tracked_forums = Set('ForumTrack', reverse='user')
-    tracked_topics = Set('ForumTrack', reverse='user')
-
-
-@mod.extend('Forum')
-class MarkAsReadModForum(object):
-    trackers = Set('ForumTrack', reverse='forum')
-    topic_trackers = Set('TopicTrack', reverse='forum')
-
-
-@mod.extend('Topic')
-class MarkAsReadModTopic(object):
-    trackers = Set('TopicTrack', reverse='topic')
-
-
 @mod.extendable
-class ForumTrack(object):
+class ForumTrack(db.Entity):
     _table_ = table_name('forums_track')
 
     user = Required('MarkAsReadModUser', column='user_id', reverse='tracked_forums')
@@ -47,7 +28,7 @@ class ForumTrack(object):
 
 
 @mod.extendable
-class TopicTrack(object):
+class TopicTrack(db.Entity):
     _table_ = table_name('topics_track')
 
     user = Required('MarkAsReadModUser', column='user_id', reverse='tracked_topics')
@@ -60,3 +41,23 @@ class TopicTrack(object):
 
     def __repr__(self):
         return '<TopicTrack({id})>'.format(id=self.id)
+
+
+@mod.extend('User')
+class MarkAsReadModUser(object):
+    lastmark = Optional(datetime.datetime, column='user_lastmark')
+
+    tracked_forums = Set('ForumTrack', reverse='user')
+    tracked_topics = Set('TopicTrack', reverse='user')
+
+
+@mod.extend('Forum')
+class MarkAsReadModForum(object):
+    trackers = Set('ForumTrack', reverse='forum')
+    topic_trackers = Set('TopicTrack', reverse='forum')
+
+
+@mod.extend('Topic')
+class MarkAsReadModTopic(object):
+    trackers = Set('TopicTrack', reverse='topic')
+

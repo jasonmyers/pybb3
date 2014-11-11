@@ -24,7 +24,7 @@ class LastPostModForum(object):
 @mod.extend('User')
 class LastPostModUser(object):
     last_poster_for_forums = Set('LastPostModForum', reverse='last_poster')
-    last_poster_for_topics = Set('LastPostModTopic', revserse='last_poster')
+    last_poster_for_topics = Set('LastPostModTopic', reverse='last_poster')
 
 
 @mod.extend('Post')

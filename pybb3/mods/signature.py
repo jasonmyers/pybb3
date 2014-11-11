@@ -13,3 +13,8 @@ class SignatureModUser(object):
     sig = Optional(LongStr, column='user_sig')
     sig_bbcode_uid = Optional(str, 5, column='user_sig_bbcode_uid')
     sig_bbcode_bitfield = Optional(str, column='user_sig_bbcode_bitfield')
+
+
+@mod.extend('Group')
+class SignatureModGroup(object):
+    sig_chars = Required(int, size=INT.MEDIUMINT, default=0, column='group_sig_chars')
