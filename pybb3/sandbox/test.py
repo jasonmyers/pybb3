@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import os
+import sys
+
 from pony.orm import *
+import pony.options
+pony.options.CUT_TRACEBACK = False
 
 from .database import db
 
@@ -29,6 +34,10 @@ from .mods.icons import Icon
 from .mods.messages import Message
 
 sql_debug(True)
+import pony.orm.core
+import logging
+pony.orm.core.orm_log_level = logging.DEBUG
+
 
 db.generate_mapping(create_tables=True)
 

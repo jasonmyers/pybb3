@@ -6,7 +6,12 @@ from pony.orm import *
 from .. import mod
 
 
-@mod.extend('Person')
+mod.require('named_person', '0.0.2')
+
+from ..person import Person
+
+
+@mod.extend(Person)
 def extend(base):
     from ..database import INT
     class AgedPerson(base):
@@ -15,9 +20,6 @@ def extend(base):
     return AgedPerson
 
 
-@mod.extend('PersonType', 'Choices')
-def extend(base):
-    class AgedPersonPersonType(base):
-        ANIMAL = 2
-
-    return AgedPersonPersonType
+@mod.extend(Person.PersonType)
+class AgedPersonPersonType(object):
+    ANIMAL = 2

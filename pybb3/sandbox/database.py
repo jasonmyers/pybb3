@@ -36,7 +36,7 @@ class ChoicesMeta(type):
             value_types_set = {value.__class__.__mro__[-2] for value in values if value is not None}
             if len(value_types_set) > 1:
                 raise ValueError('All Choices values for {} must be of the same type. Found: {}'.format(
-                    mod.extended_class_name_pretty(name),
+                    mod.extended_object_name_pretty(name),
                     ', '.join(t.__name__ for t in value_types_set)
                 ))
 
@@ -48,7 +48,7 @@ class ChoicesMeta(type):
                 collision_errors.append(
                     'Choices value collision: {values} defined twice in {cls}'.format(
                         values=', '.join(repr(v) for v in value_collisions),
-                        cls=mod.extended_class_name_pretty(name),
+                        cls=mod.extended_object_name_pretty(name),
                     ))
 
             for base in bases:
@@ -63,8 +63,8 @@ class ChoicesMeta(type):
 
                 if len(value_types_set | base_value_types_set) > 1:
                     raise ValueError('All Choices values for {}({}) must be of the same type. Found: {}'.format(
-                        mod.extended_class_name_pretty(name),
-                        mod.extended_class_name_pretty(base),
+                        mod.extended_object_name_pretty(name),
+                        mod.extended_object_name_pretty(base),
                         ', '.join(t.__name__ for t in value_types_set | base_value_types_set)
                     ))
 
@@ -74,7 +74,7 @@ class ChoicesMeta(type):
                     collision_errors.append(
                         'Choices key collision: {keys} defined in both {cls} and {base}'.format(
                             keys=', '.join(repr(k) for k in key_collisions),
-                            cls=mod.extended_class_name_pretty(name),
+                            cls=mod.extended_object_name_pretty(name),
                             base=base.__name__,
                         ))
 
@@ -84,7 +84,7 @@ class ChoicesMeta(type):
                     collision_errors.append(
                         'Choices value collision: {values} defined in both {cls} and {base}'.format(
                             values=', '.join(repr(v) for v in value_collisions),
-                            cls=mod.extended_class_name_pretty(name),
+                            cls=mod.extended_object_name_pretty(name),
                             base=base.__name__,
                         ))
 
@@ -111,11 +111,11 @@ class ChoicesMeta(type):
         if constraints:
             constraint_display = '({})'.format(' '.join(str(c) for c in constraints))
         try:
-            options = ', '.join('{}={}'.format(key, value) for key, value in cls.options())
+            options = ', '.join('{}={}'.format(key, value) for key, value in cls.items())
         except TypeError:
             options = ''
         return "<{name}{constraints}: {options}>".format(
-            name=mod.extended_class_name_pretty(cls),
+            name=mod.extended_object_name_pretty(cls),
             constraints=constraint_display,
             options=options
         )
@@ -128,7 +128,7 @@ class ChoicesMeta(type):
     def valid_choices_key(key):
         return key and key.isupper() and not key.startswith('_')
 
-    def options(cls):
+    def items(cls):
         if cls.__options is None:
             cls.__options = [
                 (key, value)
@@ -145,13 +145,13 @@ class ChoicesMeta(type):
 
     def keys(cls):
         if cls.__keys is None:
-            cls.__keys = [key for key, value in cls.options()]
+            cls.__keys = [key for key, value in cls.items()]
         return cls.__keys
     __keys = None
 
     def values(cls):
         if cls.__values is None:
-            cls.__values = [value for key, value in cls.options()]
+            cls.__values = [value for key, value in cls.items()]
         return cls.__values
     __values = None
 
