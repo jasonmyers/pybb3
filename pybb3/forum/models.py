@@ -15,19 +15,12 @@ from pybb3.extensions import bcrypt
 class Forum(db.Entity):
     _table_ = table_name('forums')
 
-    @mod.extendable
-    class ForumType(Choices(int, INT.TINYINT)):
-        FORUM_CAT = 0
-        FORUM_POST = 1
-        FORUM_LINK = 2
-
-    @mod.extendable
-    class ForumStatus(Choices(int, INT.TINYINT)):
-        pass
-
     id = PrimaryKey(int, auto=True, column='forum_id')  # Forum id=0 (global) required
-    parent = Optional(lambda: Forum, column='parent_id', reverse='children')
-    children = Set(lambda: Forum, reverse='parent')
+    parent = Optional('Forum', column='parent_id', reverse='children')
+    children = Set('Forum', reverse='parent')
+
+    topics = Set('Topic', reverse='forum')
+    posts = Set('Post', reverse='forum')
 
     name = Required(str, column='forum_name')
     desc = Required(LongStr, column='forum_desc')  # + Bitfields
@@ -36,8 +29,17 @@ class Forum(db.Entity):
     image = Optional(str, column='forum_image')
     topics_per_page = Required(int, size=INT.TINYINT, column='forum_topics_per_page')
 
-    type = Required(int, default=0, size=INT.TINYINT, py_check=ForumType.check, column='forum_type')
-    status = Required(int, default=0, size=INT.TINYINT, py_check=ForumStatus.check, column='forum_status')
+    @mod.extendable
+    class ForumType(Choices(int, INT.TINYINT)):
+        FORUM_CAT = 0
+        FORUM_POST = 1
+        FORUM_LINK = 2
+    type = Required(int, size=ForumType.size, default=0, py_check=ForumType.check, column='forum_type')
+
+    @mod.extendable
+    class ForumStatus(Choices(int, INT.TINYINT)):
+        DEFAULT = 0  # ???
+    status = Required(int, size=ForumStatus.size, default=0, py_check=ForumStatus.check, column='forum_status')
 
     flags = Required(int, size=INT.TINYINT, default=32, column='forum_flags')
     display_on_index = Required(bool, default=True, column='display_on_index')
@@ -49,6 +51,8 @@ class Forum(db.Entity):
     prune_days = Required(int, size=INT.TINYINT, default=0, column='prune_days')
     prune_viewed = Required(int, size=INT.TINYINT, default=0, column='prune_viewed')
     prune_freq = Required(int, size=INT.TINYINT, default=0, column='prune_freq')
+
+    logs = Set('Log', reverse='forum')
 
     def __new__(cls, password=None, **kwargs):
         return super(Forum, cls).__new__(cls, **kwargs)
@@ -68,15 +72,15 @@ class Forum(db.Entity):
     def check_password(self, value):
         return bcrypt.check_password_hash(self.password, value)
 
-
-
-# Make sure we have a global forum at id=0
-with db_session:
-    if not Forum[0]:
-        Forum(
-            id=0,
-            parent=None,
-            name='Global',
-            desc='Top level forum',
-            topics_per_page=0,
-        )
+    @classmethod
+    def ensure_global_forum(cls):
+        # Make sure we have a global forum at id=0
+        with db_session:
+            if not cls[0]:
+                cls(
+                    id=0,
+                    parent=None,
+                    name='Global',
+                    desc='Top level forum',
+                    topics_per_page=0,
+                )

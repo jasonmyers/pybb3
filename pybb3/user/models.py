@@ -16,6 +16,9 @@ from pybb3.database import (
 
 @mod.extendable
 class User(UserMixin, db.Entity):
+    _table_ = table_name('users')
+
+    id = PrimaryKey(int, auto=True, column='user_id')
 
     @mod.extendable
     class UserType(Choices(int, INT.TINYINT)):
@@ -23,16 +26,18 @@ class User(UserMixin, db.Entity):
         INACTIVE = 1
         IGNORED = 2
         FOUNDER = 3
+    type = Required(int, size=UserType.size, default=0, py_check=UserType.check, column='user_type')
 
-    id = PrimaryKey(int, auto=True, column='user_id')
-
-    type = Required(int, size=INT.TINYINT, default=0, py_check=UserType.check, column='user_type')
-    group = Optional('Group', column='group_id', reverse='users')
+    group = Optional('Group', column='group_id', reverse='default_users')  # Default group
+    groups = Set('Group', table=table_name('user_group'), column='group_id', reverse='users')
     topics = Set('Topic', reverse='poster')
-    posts = Required(int, INT.MEDIUMINT, default=0, column='user_posts')
+    posts = Set('Post', reverse='poster')
+    bumped_topics = Optional('Topic', reverse='bumper')
+    post_count = Required(int, size=INT.MEDIUMINT, default=0, column='user_posts')
 
     permissions = Optional(LongStr, column='user_permissions')
     perm_from = Optional('User', column='user_perm_from', reverse='perm_to')
+    perm_to = Set('User', reverse='perm_from')
     ip = Optional(str, 40, column='user_ip')
     regdate = Required(datetime.datetime, default=datetime.datetime.utcnow, column='user_regdate')
     username = Required(str, column='username')
@@ -55,8 +60,9 @@ class User(UserMixin, db.Entity):
     login_attempts = Required(int, size=INT.TINYINT, default=0, column='user_login_attempts')
 
     @mod.extendable
-    class UserInactiveReason(Choices(int, INT.TINYINT)):pass
-    inactive_reason = Optional(int, size=INT.TINYINT, py_check=UserInactiveReason, column='user_inactive_reason')
+    class UserInactiveReason(Choices(int, INT.TINYINT)):
+        pass
+    inactive_reason = Optional(int, size=UserInactiveReason.size, py_check=UserInactiveReason, column='user_inactive_reason')
     inactive_time = Optional(datetime.datetime, column='user_inactive_time')
 
     lang = Optional(str, 30, column='user_lang')
@@ -64,11 +70,13 @@ class User(UserMixin, db.Entity):
     dst = Required(bool, default=False, column='user_dst')
     dateformat = Optional(str, 30, column='user_dateformat')
 
-    colour = Optional(str, 6, column='user_colour')
     allow_viewemail = Required(bool, default=True, column='user_allow_viewemail')
     allow_massemail = Required(bool, default=True, column='user_allow_massemail')
 
     topics_posted_in = Set('Topic', table=table_name('topics_posted'), column='topic_id', reverse='posters')
+
+    logs = Set('Log', reverse='user')
+    reportee_logs = Set('Log', reverse='reportee')
 
     def __new__(cls, password=None, **kwargs):
         # Don't send password, since we need to encrypt it
@@ -101,3 +109,28 @@ class User(UserMixin, db.Entity):
     def __repr__(self):
         return '<User({id}: {username!r})>'.format(
             id=self.id, username=self.username)
+
+
+@mod.extendable
+class Group(db.Entity):
+    _table_ = table_name('groups')
+
+    id = PrimaryKey(int, auto=True, column='group_id')
+
+    users = Set('User', table=table_name('user_group'), column='user_id', reverse='groups')
+    default_users = Set('User', reverse='group')
+
+    @mod.extendable
+    class GroupType(Choices(int, INT.TINYINT)):
+        DEFAULT = 1  # ???
+    type = Required(int, size=GroupType.size, default=GroupType.DEFAULT, py_check=GroupType.check, column='group_type')
+
+    founder_manage = Required(bool, default=False, column='group_founder_manage')
+    name = Optional(str, column='group_name')
+    desc = Optional(LongStr, column='group_desc')
+    desc_bitfield = Optional(str, column='group_desc_bitfield')
+    desc_options = Required(int, size=INT.INTEGER, default=7, column='desc_options')
+    desc_uid = Optional(str, 5, column='group_desc_uid')
+
+    display = Required(bool, default=False, column='group_display')
+    legend = Required(bool, default=True, column='group_legend')

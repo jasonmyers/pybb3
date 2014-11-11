@@ -11,7 +11,6 @@ from pybb3.database import (
 
 @mod.extendable
 class Post(db.Entity):
-    """ Subclass BasePost class to add fields to `Post` """
     _table_ = table_name('posts')
 
     id = PrimaryKey(int, auto=True, column='post_id')

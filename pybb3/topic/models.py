@@ -16,24 +16,11 @@ from pybb3.database import (
 class Topic(db.Entity):
     _table_ = table_name('topics')
 
-    @mod.extendable
-    class TopicType(Choices(int, INT.TINYINT)):
-        POST_NORMAL = 0
-        POST_STICKY = 1
-        POST_ANNOUNCE = 2
-        POST_GLOBAL = 3
-
-    @mod.extendable
-    class TopicStatus(Choices(int, INT.TINYINT)):
-        ITEM_UNLOCKED = 0
-        ITEM_LOCKED = 1
-        ITEM_MOVED = 2
-
     id = PrimaryKey(int, auto=True, column='topic_id')
 
     forum = Required('Forum', column='forum_id', reverse='topics')
     poster = Required('User', column='topic_poster', reverse='topics')
-
+    posts = Set('Post', reverse='topic')
     posters = Set('User', table=table_name('topics_posted'), column='user_id', reverse='topics_posted_in')
 
     title = Required(str, 100, column='topic_title')
@@ -41,12 +28,27 @@ class Topic(db.Entity):
     time = Required(datetime.datetime, default=datetime.datetime.utcnow, column='topic_time')
     time_limit = Required(int, default=0, column='topic_time_limit')
 
-    status = Required(int, size=INT.TINYINT, default=0, py_check=TopicStatus.check, column='topic_status')
-    type = Required(int, size=INT.TINYINT, default=0, py_check=TopicType.check, column='topic_type')
+    @mod.extendable
+    class TopicStatus(Choices(int, INT.TINYINT)):
+        ITEM_UNLOCKED = 0
+        ITEM_LOCKED = 1
+        ITEM_MOVED = 2
+    status = Required(int, size=TopicStatus.size, default=0, py_check=TopicStatus.check, column='topic_status')
+
+    @mod.extendable
+    class TopicType(Choices(int, INT.TINYINT)):
+        POST_NORMAL = 0
+        POST_STICKY = 1
+        POST_ANNOUNCE = 2
+        POST_GLOBAL = 3
+    type = Required(int, size=TopicType.size, default=0, py_check=TopicType.check, column='topic_type')
 
     moved = Optional('Topic', column='topic_moved_id', reverse='moved_from')
+    moved_from = Optional('Topic', reverse='moved')
     bumped = Required(bool, default=False, column='topic_bumped')
     bumper = Optional('User', column='topic_bumper', reverse='bumped_topics')
+
+    logs = Set('Log', reverse='topic')
 
     def __repr__(self):
         return '<Topic({id}: {title!r})>'.format(id=self.id, name=self.title)
