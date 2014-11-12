@@ -167,4 +167,4 @@ class TestChoices:
 class TestDatabase:
 
     def test_table_name(self):
-        assert table_name('foo') == table_prefix + '_' + 'foo'
+        assert table_name('foo') == table_prefix + 'foo'

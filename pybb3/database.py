@@ -20,11 +20,11 @@ class INT:
     BIGINT = 64         # 64 bit - BIGINT in MySQL
 
 
-table_prefix = 'pybb3'
+table_prefix = 'pybb3_'
 
 
 def table_name(table):
-    return '{table_prefix}_{table_name}'.format(
+    return '{table_prefix}{table_name}'.format(
         table_prefix=table_prefix,
         table_name=table,
     )
