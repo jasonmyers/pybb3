@@ -50,7 +50,8 @@ class TestChoices:
             POST = 1
             not_a_choice = 3
 
-            def sort_key(self, kv):
+            @staticmethod
+            def sort_key(kv):
                 return kv[0]
 
         assert Method.items() == [('GET', 2), ('POST', 1)]
@@ -84,15 +85,14 @@ class TestChoices:
         assert not isinstance(Choices(), Choices)
 
         str_choices = Choices(str, 10, unsigned=True)
+        assert str_choices.type == str
+        assert str_choices.size == 10
+        assert str_choices.unsigned is None
+
         int_choices = Choices(int, 4, unsigned=True)
-
-        assert str_choices._type == str
-        assert str_choices._size == 10
-        assert str_choices._unsigned is False
-
-        assert int_choices._type == int
-        assert int_choices._size == 4
-        assert int_choices._unsigned is True
+        assert int_choices.type == int
+        assert int_choices.size == 4
+        assert int_choices.unsigned is True
 
         with pytest.raises(ValueError):
             Choices(size=10)
@@ -126,10 +126,10 @@ class TestChoices:
 
     def test_choices_size_constraint(self):
 
-        assert Choices._size is None
-        assert Choices()._size is None
-        assert Choices(int)._size == INT.INTEGER
-        assert Choices(str)._size == 255
+        assert Choices.size is None
+        assert Choices().size is None
+        assert Choices(int).size == INT.INTEGER
+        assert Choices(str).size == 255
 
         class Method(Choices(str, 4)):
             GET = 'get'
@@ -155,13 +155,13 @@ class TestChoices:
 
     def test_choices_size_constraint_unsigned(self):
         class Method(Choices(int, 2, unsigned=True)):
-            GET = 7
-            POST = 8
+            GET = 6
+            POST = 7
 
         with pytest.raises(ValueError):
             class Method(Choices(int, 2, unsigned=True)):
-                GET = 8
-                POST = 9
+                GET = 7
+                POST = 8
 
 
 class TestDatabase:

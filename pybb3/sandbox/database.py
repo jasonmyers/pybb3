@@ -171,10 +171,11 @@ class ChoicesMeta(type):
             if not isinstance(value, cls._type):
                 raise ValueError('{} requires {} values, found {!r}'.format(
                     cls, cls._type.__name__, value))
-        if cls._size is not None:
-            cls.validate_size_constraint(value)
+        cls.validate_size_constraint(value)
 
     def validate_size_constraint(cls, value):
+        if cls._size is None:
+            return
         if cls._type is str:
             if not len(value) <= cls._size:
                 raise ValueError('Max length for {} is {}, found {!r} (len={})'.format(
@@ -182,8 +183,8 @@ class ChoicesMeta(type):
                 ))
         if cls._type is int:
             bits = cls._size * 2 if cls._unsigned else cls._size
-            if not value.bit_length() < bits:
-                raise ValueError('Max bits for {} is {}, found {!r} (bits={})'.format(
+            if not value.bit_length() <= bits:
+                raise ValueError('Max bits for {} is {}, found value={!r} ({} bits)'.format(
                     cls, bits, value, value.bit_length()
                 ))
 
