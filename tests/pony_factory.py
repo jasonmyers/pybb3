@@ -53,7 +53,7 @@ class PonyModelFactory(base.Factory):
             # Todo:  composite_key models?
             auto_pk = next(
                 name
-                for field, name in model.__dict__.items()
+                for name, field in model._adict_.items()
                 if isinstance(field, PrimaryKey) and field.auto
             )
             max_pk = select("entity.{pk} for entity in model".format(pk=auto_pk)).max()
