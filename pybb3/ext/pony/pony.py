@@ -75,6 +75,7 @@ class Pony(object):
         self.db.generate_mapping(check_tables=True, create_tables=True)
         return self.db
 
+    @property
     def session(self, *args, **kwargs):
         """ Wrapper around the `@db_session` decorator.  Usage::
 
@@ -88,7 +89,7 @@ class Pony(object):
         this is only required if that setting is disabled
 
         """
-        return db_session(*args, **kwargs)
+        return db_session
 
     def exempt(self, view):
         """ Decorator to disable the automatic `@db_session` wrapping on a
