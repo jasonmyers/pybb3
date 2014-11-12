@@ -54,6 +54,9 @@ class Pony(object):
         app.add_url_rule = self.patch_add_url_rule(app)
 
     def connect(self, app):
+        if self.db.schema:
+            return self.db
+
         provider = app.config['PONY_DATABASE_PROVIDER']
         uri = app.config['PONY_DATABASE_URI']
         username = app.config['PONY_DATABASE_USERNAME']

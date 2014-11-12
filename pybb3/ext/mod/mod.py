@@ -563,6 +563,9 @@ class Mod(object):
             self.load_mod(last_mod, fail_on_missing_required=fail_on_missing_required)
 
     def install_mods(self, app):
+        if self.mods_loaded:
+            return
+
         logger.debug('Importing core models')
         self.register_core_models()
 
