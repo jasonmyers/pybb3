@@ -95,10 +95,6 @@ class User(UserMixin, db.Entity):
         return bcrypt.check_password_hash(self.password, value)
 
     @property
-    def full_name(self):
-        return "{0} {1}".format(self.first_name, self.last_name)
-
-    @property
     def get_dateformat(self):
         return self.dateformat or 'd M Y H:i'
 

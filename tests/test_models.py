@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import datetime
 
 from pybb3.database import db
-from pybb3.user.models import User, Role
+from pybb3.user.models import User
 from .factories import UserFactory
 
 
@@ -55,11 +55,3 @@ class TestUser:
             user = UserFactory(first_name='Foo', last_name='Bar')
 
         assert user.full_name == 'Foo Bar'
-
-    def test_roles(self):
-        with db.session:
-            role = Role(name='admin')
-            user = UserFactory()
-            user.roles.add(role)
-
-        assert role in user.roles
