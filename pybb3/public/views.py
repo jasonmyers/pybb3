@@ -65,7 +65,7 @@ def register():
 
 
 @blueprint.route("/about")
-@db.exempt
+@db.nosession
 def about():
     form = LoginForm(request.form)
     return render_template("about.html", form=form)

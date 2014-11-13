@@ -72,7 +72,7 @@ class Pony(object):
         #db.bind('mysql', host='', user='', passwd='', db='')
         #db.bind('oracle', 'user/password@dsn')
 
-        self.db.generate_mapping(check_tables=True, create_tables=True)
+        self.generate_mapping(check_tables=True, create_tables=True)
         return self.db
 
     @property
@@ -91,12 +91,28 @@ class Pony(object):
         """
         return db_session
 
-    def exempt(self, view):
+    @property
+    def drop_all_tables(self):
+        return self.db.drop_all_tables
+
+    @property
+    def create_tables(self):
+        return self.db.create_tables
+
+    @property
+    def generate_mapping(self):
+        return self.db.generate_mapping
+
+    @property
+    def commit(self):
+        return self.db.commit
+
+    def nosession(self, view):
         """ Decorator to disable the automatic `@db_session` wrapping on a
         particular route.  Usage::
 
             @app.route(...)
-            @db.exempt
+            @db.nosession
             def myview(...):
                 ... no automatic db session ...
 
