@@ -28,12 +28,18 @@ def _make_context():
 
 
 @manager.option('-k', '--tests', help='Only run tests matching this pytest string expression')
-def test(tests=None):
+@manager.option('-d', '--pdb', action='store_true', help='Break to pdb on failure')
+@manager.option('-x', action='store_true', help='Stop after first failed test')
+def test(tests=None, pdb=False, x=False):
     """Run the tests."""
     import pytest
     command = ['tests', '--verbose']
     if tests:
         command.extend(['-k', tests])
+    if pdb:
+        command.extend(['--pdb'])
+    if x:
+        command.extend(['-x'])
     exit_code = pytest.main(command)
     return exit_code
 
