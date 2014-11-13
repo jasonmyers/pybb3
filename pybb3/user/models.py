@@ -80,7 +80,7 @@ class User(UserMixin, db.Entity):
 
     def __new__(cls, password=None, **kwargs):
         # Don't send password, since we need to encrypt it
-        return super(User, cls).__new__(cls, **kwargs)
+        return super(mod.extendable(User), cls).__new__(cls, **kwargs)
 
     def __init__(self, password=None, **kwargs):
         if password:

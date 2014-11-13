@@ -26,3 +26,7 @@ class Person(PersonMixin, db.Entity):
     final_property = Optional(str)
 
     posted_in = Set('Post', column='post_id')
+
+    def __new__(cls, password=None, **kwargs):
+        return super(mod.extendable(Person), cls).__new__(cls, **kwargs)
+

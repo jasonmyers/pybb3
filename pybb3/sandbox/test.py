@@ -45,7 +45,7 @@ print(Person._columns_)
 print(Post._columns_)
 
 with db_session:
-    person = Person(name='Jason', age=32)
+    person = Person(name='Jason', age=32, password='rabbit')
     post = Post(poster=person)
 
     print(Person.PersonType)

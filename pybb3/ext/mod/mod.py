@@ -44,9 +44,8 @@ class Mod(object):
         #     {'registered name': <class>}
         self.extendable_registry = OrderedDict()
 
-        # A set of the objects that are extendable.  Equivalent to:
-        #     set(self.extendable_registry.values())
-        self.extendable_objects = set()
+        # Holds a mapping of extendable objects to their original bases
+        self.extendable_objects = {}
 
         # For each extendable class, holds which classes have been
         # decorated with `@mod.extend`
@@ -157,16 +156,70 @@ class Mod(object):
 
         (Note that we link the FKs to our customized models, not to core models)
 
+        Caution:: This decorator returns a subclass of the class you register
+        which means your base class is replaced in your module's namespace,
+        leaving no reference to your original base class. A side effect of
+        this is that referencing your class in e.g. class methods is actually
+        referencing the new subclass returned by this decorator, which may
+        affect things like super calls, causing recursion issues, etc.
+
+        For example, this::
+
+            @mod.extendable
+            class Topic(...):
+                @classmethod
+                def method(cls):
+                    return super(Topic, cls).method()
+
+        is equivalent to this::
+
+            class _Topic(...):
+                @classmethod
+                def method(cls):
+                    return super(Topic, cls).method()  # !!!
+
+            class Topic(_Topic):
+                pass
+
+        Notice that the `super` call in `_Topic` is referencing the replaced
+        subclass `Topic`, and not the "self" class `_Topic`.  To alleviate this,
+        you should always use `mod.extendable(Class)` when needing to reference
+        `Class` from within your class.  Once you have registered your class
+        with `@mod.extendable`, `mod.extendable` will will return your original
+        base class. e.g., the above should be written as::
+
+            @mod.extendable
+            class Topic(...):
+                @classmethod
+                def method(cls):
+                    return super(mod.extendable(Topic), cls).method()
+
+        which is equivelent to::
+
+            class _Topic(...):
+                @classmethod
+                def method(cls):
+                    return super(_Topic, cls).method()
+
+            class Topic(_Topic):
+                pass
+
         """
+        if obj in self.extendable_objects:
+            # mod.extendable(obj)
+            # object has already been extended, return the original base
+            return self.extendable_objects[obj]
+
         if isinstance(obj, six.string_types):
             # @mod.extendable('name')
+            # class decorator specifying a specific name to register
             return functools.partial(self.extendable, name=obj)
 
         if name is None:
+            # @mod.extendable
+            # class decorator without name specified, use the name of the class
             name = self.extended_object_name_pretty(obj)
 
-        # @mod.extendable
-        empty_subclass = obj.__class__(self.extended_object_name(obj), (obj,), {})
         if name in self.extendable_registry:
             raise ClassExtensionError(
                 '{} attempted to register as extendable under {!r}, but {} is'
@@ -174,15 +227,17 @@ class Mod(object):
                 '@extend and @extendable decorations for one or the other'.format(
                     obj, name, self.extendable_registry[name]
                 ))
-        empty_subclass.__name__ = name
-        self.extendable_registry[name] = empty_subclass
-        self.extendable_objects.add(empty_subclass)
+
+        extended = obj.__class__(self.extended_object_name(obj), (obj,), {})
+        extended.__name__ = name
+        self.extendable_registry[name] = extended
+        self.extendable_objects[extended] = obj
 
         # We return an "empty" subclass of the decorated class, so that
         # it is usable in the immediate file.  Later we will replace the
         # __bases__ of this temporary class with any mod-installed custom
         # classes registered via `mod.extend`
-        return empty_subclass
+        return extended
 
     def extend(self, name):
         """ Decorator to extend a `@mod.extendable` class with additional
@@ -379,7 +434,7 @@ class Mod(object):
             # @mod.extendable
             return cls.__class__(extension.__name__, (cls,), dict(extension.__dict__))
         else:
-            # Otherwise assum a callable and pass in the base class
+            # Otherwise assume a callable and pass in the base class
             return extension(cls)
 
     def load_model_extensions(self, name, obj):
