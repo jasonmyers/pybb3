@@ -228,6 +228,7 @@ class Mod(object):
                     obj, name, self.extendable_registry[name]
                 ))
 
+        obj._disable_discriminator_ = True
         extended = obj.__class__(self.extended_object_name(obj), (obj,), {})
         extended.__name__ = name
         self.extendable_registry[name] = extended
@@ -430,7 +431,7 @@ class Mod(object):
 
     def generate_extended_base(self, cls, extension):
         if inspect.isclass(extension):
-            # If a class, convert it to the same class that was marked
+            # If a class, convert it to the same class that was marked as
             # @mod.extendable
             return cls.__class__(extension.__name__, (cls,), dict(extension.__dict__))
         else:
@@ -535,7 +536,6 @@ class Mod(object):
                     # Should be no more references to tempobj after this
                     del obj._database_.entities[tempobj_name]
                     del obj._database_.__dict__[tempobj_name]
-                    del obj._discriminator_attr_.code2cls[tempobj_name]
 
             except Exception as e:
                 raise e.__class__(
@@ -617,9 +617,25 @@ class Mod(object):
                 continue
             self.load_mod(last_mod, fail_on_missing_required=fail_on_missing_required)
 
+    def disable_discriminator(self):
+        from pony.orm.core import Discriminator
+
+        original_create_default_attr = Discriminator.create_default_attr
+
+        @functools.wraps(original_create_default_attr)
+        def disabled_create_default_attr(entity):
+            if getattr(entity, '_disable_discriminator_', False):
+                return
+            return original_create_default_attr(entity)
+
+        Discriminator.create_default_attr = disabled_create_default_attr
+
     def install_mods(self, app):
         if self.mods_loaded:
             return
+
+        logger.debug('Disable pony _discriminator_ for extended models')
+        self.disable_discriminator()
 
         logger.debug('Importing core models')
         self.register_core_models()
