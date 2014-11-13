@@ -27,11 +27,14 @@ def _make_context():
     return {'app': app, 'db': db, 'User': User}
 
 
-@manager.command
-def test():
+@manager.option('-k', '--tests', help='Only run tests matching this pytest string expression')
+def test(tests=None):
     """Run the tests."""
     import pytest
-    exit_code = pytest.main(['tests', '--verbose'])
+    command = ['tests', '--verbose']
+    if tests:
+        command.extend(['-k', tests])
+    exit_code = pytest.main(command)
     return exit_code
 
 
