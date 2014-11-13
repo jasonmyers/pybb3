@@ -18,8 +18,7 @@ class BaseFactory(PonyModelFactory):
 class UserFactory(BaseFactory):
     username = Sequence(lambda n: "user{0}".format(n))
     email = Sequence(lambda n: "user{0}@example.com".format(n))
-    password = PostGenerationMethodCall('set_password', 'example')
-    active = True
+    password = PostGenerationMethodCall('set_password', 'password')
 
     class Meta:
         model = User

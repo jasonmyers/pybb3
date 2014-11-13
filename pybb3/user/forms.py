@@ -14,7 +14,7 @@ class RegisterForm(Form):
     email = StringField(
         'Email', validators=[DataRequired(), Email(), Length(min=6, max=40)])
     password = PasswordField(
-        'Password', validators=[DataRequired(), Length(min=8, max=128)])
+        'Password', validators=[DataRequired(), Length(min=8, max=256)])
     confirm = PasswordField(
         'Verify password',
         [DataRequired(), EqualTo('password', message='Passwords must match')])

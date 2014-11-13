@@ -46,7 +46,7 @@ class TestLoggingIn:
         # Submits
         res = form.submit()
         # sees error
-        assert 'Invalid password' in res
+        assert 'Invalid username or password' in res
 
     def test_sees_error_message_if_username_doesnt_exist(self, user, testapp):
         # Goes to homepage
@@ -58,7 +58,7 @@ class TestLoggingIn:
         # Submits
         res = form.submit()
         # sees error
-        assert 'Unknown user' in res
+        assert 'Invalid username or password' in res
 
 
 class TestRegistering:
@@ -73,8 +73,8 @@ class TestRegistering:
         form = res.forms['registerForm']
         form['username'] = 'foobar'
         form['email'] = 'foo@bar.com'
-        form['password'] = 'secret'
-        form['confirm'] = 'secret'
+        form['password'] = 'password'
+        form['confirm'] = 'password'
         # Submits
         res = form.submit().follow()
         assert res.status_code == 200
@@ -88,24 +88,39 @@ class TestRegistering:
         form = res.forms['registerForm']
         form['username'] = 'foobar'
         form['email'] = 'foo@bar.com'
-        form['password'] = 'secret'
-        form['confirm'] = 'secrets'
+        form['password'] = 'password'
+        form['confirm'] = 'passwords'
         # Submits
         res = form.submit()
         # sees error message
         assert 'Passwords must match' in res
 
-    def test_sees_error_message_if_user_already_registered(self, user, testapp):
-        user = UserFactory(active=True)  # A registered user
-        user.save()
+    def test_sees_error_message_if_password_too_short(self, user, testapp):
+        # Goes to registration page
+        res = testapp.get(url_for('public.register'))
+        # Fills out form, but passwords don't match
+        form = res.forms['registerForm']
+        form['username'] = 'foobar'
+        form['email'] = 'foo@bar.com'
+        form['password'] = 'pass'
+        form['confirm'] = 'pass'
+        # Submits
+        res = form.submit()
+        # sees error message
+        assert 'between 8 and 256' in res
+
+    def test_sees_error_message_if_user_already_registered(self, db, user, testapp):
+        with db.session:
+            user = UserFactory()  # A registered user
+
         # Goes to registration page
         res = testapp.get(url_for('public.register'))
         # Fills out form, but username is already registered
         form = res.forms['registerForm']
         form['username'] = user.username
         form['email'] = 'foo@bar.com'
-        form['password'] = 'secret'
-        form['confirm'] = 'secret'
+        form['password'] = 'password'
+        form['confirm'] = 'password'
         # Submits
         res = form.submit()
         # sees error

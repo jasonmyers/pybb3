@@ -78,21 +78,29 @@ class User(UserMixin, db.Entity):
     logs = Set('Log', reverse='user')
     reportee_logs = Set('Log', reverse='reportee')
 
-    def __new__(cls, password=None, **kwargs):
-        # Don't send password, since we need to encrypt it
-        return super(mod.extendable(User), cls).__new__(cls, **kwargs)
-
-    def __init__(self, password=None, **kwargs):
+    def __new__(cls, password='', username=None, username_clean=None, **kwargs):
         if password:
-            self.set_password(password)
-        else:
-            self.password = None
+            password = cls.encrypt_password(password)
+
+        if username_clean is None and username:
+            username_clean = cls.clean_username(username)
+
+        return super(mod.extendable(User), cls).__new__(
+            cls, password=password, username=username, username_clean=username_clean, **kwargs)
+
+    @classmethod
+    def encrypt_password(cls, password):
+        return bcrypt.generate_password_hash(password)
 
     def set_password(self, password):
-        self.password = bcrypt.generate_password_hash(password)
+        self.password = self.encrypt_password(password)
 
     def check_password(self, value):
         return bcrypt.check_password_hash(self.password, value)
+
+    @classmethod
+    def clean_username(cls, username):
+        return username.lower().strip()
 
     @property
     def get_dateformat(self):

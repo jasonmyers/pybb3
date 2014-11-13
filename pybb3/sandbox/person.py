@@ -27,6 +27,17 @@ class Person(PersonMixin, db.Entity):
 
     posted_in = Set('Post', column='post_id')
 
+    password = Optional(str)
+
     def __new__(cls, password=None, **kwargs):
-        return super(mod.extendable(Person), cls).__new__(cls, **kwargs)
+        print('Person.__new__(password={}, **kwargs={})'.format(password, kwargs))
+        password = cls.encrypt_password(password)
+        return super(mod.extendable(Person), cls).__new__(cls, password=password, **kwargs)
+
+    @classmethod
+    def encrypt_password(cls, password):
+        return password[::-1]
+
+    def check_password(self, value):
+        return self.password and value == self.passwprd[::-1]
 

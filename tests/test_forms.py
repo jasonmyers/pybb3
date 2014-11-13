@@ -11,7 +11,7 @@ class TestRegisterForm:
         # Enters username that is already registered
         form = RegisterForm(
             username=user.username, email='foo@bar.com',
-            password='example', confirm='example')
+            password='password', confirm='password')
 
         assert form.validate() is False
         assert 'Username already registered' in form.username.errors
@@ -20,7 +20,7 @@ class TestRegisterForm:
         # enters email that is already registered
         form = RegisterForm(
             username='unique', email=user.email,
-            password='example', confirm='example')
+            password='password', confirm='password')
 
         assert form.validate() is False
         assert 'Email already registered' in form.email.errors
@@ -28,37 +28,35 @@ class TestRegisterForm:
     def test_validate_success(self, db):
         form = RegisterForm(
             username='newusername', email='new@test.test',
-            password='example', confirm='example')
-        assert form.validate() is True
+            password='password', confirm='password')
+        with db.session:
+            assert form.validate() is True
 
 
 class TestLoginForm:
 
-    def test_validate_success(self, user):
-        user.set_password('example')
-        user.save()
-        form = LoginForm(username=user.username, password='example')
+    def test_validate_success(self, db, user):
+        user.set_password('password')
+
+        form = LoginForm(username=user.username, password='password')
         assert form.validate() is True
         assert form.user == user
 
     def test_validate_unknown_username(self, db):
-        form = LoginForm(username='unknown', password='example')
-        assert form.validate() is False
-        assert 'Unknown username' in form.username.errors
+        form = LoginForm(username='unknown', password='password')
+
+        with db.session:
+            assert form.validate() is False
+
+        assert 'Invalid username or password' in form.username.errors
         assert form.user is None
 
-    def test_validate_invalid_password(self, user):
-        user.set_password('example')
-        user.save()
-        form = LoginForm(username=user.username, password='wrongpassword')
-        assert form.validate() is False
-        assert 'Invalid password' in form.password.errors
+    def test_validate_invalid_password(self, db, user):
+        user.set_password('password')
 
-    def test_validate_inactive_user(self, user):
-        user.active = False
-        user.set_password('example')
-        user.save()
-        # Correct username and password, but user is not activated
-        form = LoginForm(username=user.username, password='example')
+        db.commit()
+
+        form = LoginForm(username=user.username, password='wrongpassword')
+
         assert form.validate() is False
-        assert 'User not activated' in form.username.errors
+        assert 'Invalid username or password' in form.username.errors
