@@ -40,8 +40,8 @@ def db(app):
     _db.drop_all_tables(with_all_data=True)
 
 
-@pytest.fixture
+@pytest.yield_fixture
 def user(db):
-    user = UserFactory(password='myprecious')
-    db.session.commit()
-    return user
+    """ Using this fixture wraps your test in a db_session """
+    with db.session:
+        yield UserFactory(password='myprecious')
