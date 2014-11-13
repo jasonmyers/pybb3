@@ -7,6 +7,8 @@ from __future__ import unicode_literals
 
 from flask import url_for
 
+from pony.orm import *
+
 from pybb3.user.models import User
 from .factories import UserFactory
 
@@ -63,8 +65,9 @@ class TestLoggingIn:
 
 class TestRegistering:
 
-    def test_can_register(self, user, testapp):
-        old_count = len(User.query.all())
+    def test_can_register(self, db, user, testapp):
+        with db.session:
+            old_count = count(u for u in User)
         # Goes to homepage
         res = testapp.get('/')
         # Clicks Create Account button
@@ -79,7 +82,8 @@ class TestRegistering:
         res = form.submit().follow()
         assert res.status_code == 200
         # A new user was created
-        assert len(User.query.all()) == old_count + 1
+        with db.session:
+            assert count(u for u in User) == old_count + 1
 
     def test_sees_error_message_if_passwords_dont_match(self, user, testapp):
         # Goes to registration page
