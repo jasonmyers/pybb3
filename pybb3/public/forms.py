@@ -19,9 +19,6 @@ class LoginForm(Form):
             self.username.errors.append('Invalid username or password')
             return False
 
-        if not self.user.active:
-            self.username.errors.append('User not activated')
-            return False
         return True
 
     @property
