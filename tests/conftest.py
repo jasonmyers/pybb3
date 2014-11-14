@@ -7,7 +7,8 @@ from webtest import TestApp
 
 from pybb3.settings import TestConfig
 from pybb3.app import create_app
-from pybb3.database import db as _db
+from pybb3.ext.pony import Pony
+from pybb3.ext.mod import Mod
 
 from .factories import UserFactory
 
@@ -31,13 +32,19 @@ def testapp(app):
 
 @pytest.yield_fixture(scope='function')
 def db(app):
-    _db.app = app
+    db = Pony(app=app)
+
     with app.app_context():
-        _db.create_tables()
+        db.create_tables()
 
-    yield _db
+    yield db
 
-    _db.drop_all_tables(with_all_data=True)
+    db.drop_all_tables(with_all_data=True)
+
+
+@pytest.fixture(scope='function')
+def mod(app):
+    return Mod(app=app)
 
 
 @pytest.yield_fixture
