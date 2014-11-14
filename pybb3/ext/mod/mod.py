@@ -33,7 +33,7 @@ class RegistryTypes:
     # Extensions
     extendable_registry = OrderedDict
     extendable_roots = dict
-    extend_registry = lambda: defaultdict(list)
+    deferred_extension_registry = lambda: defaultdict(list)
 
     # Mods
     installed_registry = dict
@@ -55,11 +55,14 @@ class Mod(object):
         # Cleared after extensions are performed
         self.extendable_registry = RegistryTypes.extendable_registry()
 
-        # For each extendable class, holds which classes have been
-        # decorated with `@mod.extend`
+        # For each extendable class, holds deferred extension functions
+        # registered by `@extend`, to be processed when `extend_objects` is run
+        #
+        # `@extend` can be used with a name or the actual object, so they keys
+        # here are whatever was passed to `@extend`
         #     {'registered name': [extensions, ...],
         #      <class>: [extensions, ...]}
-        self.extend_registry = RegistryTypes.extend_registry()
+        self.deferred_extension_registry = RegistryTypes.deferred_extension_registry()
 
         # Holds a mapping of extendable objects to their root (original base)
         self.extendable_roots = RegistryTypes.extendable_roots()
@@ -260,7 +263,7 @@ class Mod(object):
 
     def extend(self, name):
         """ Decorator to extend a `@mod.extendable` class with additional
-        fields and/or methods
+        attributes and/or methods
 
         `name`: the object or registered name of the object you wish to extend,
             as registered by `@mod.extendable('name')`
@@ -269,19 +272,27 @@ class Mod(object):
 
         See `mod.extendable` for usage
 
-        In addition to decorating a class, you can provide a function that
-        receives a base class and must return a subclass.  Example
-        (these two are equivalent)::
+        If you decorate a class, the target object will be extended immediately
+        and your class will be replaced with the generated class in that object's
+        inheritance hierarchy.  Your class must inherit from `object` (not the
+        target object or its base(s)).
+
+        If you decorate a function, your function will be placed in a deferred
+        queue and be processed later when `extend_objects` is called.  Your function
+        will be passed a base class, and should return a class extending
+        from that base
+
+        Example (these two are equivalent)::
 
             from pybb3.mods import mod
             from pybb3.topic.models import Topic
 
-            # Decorate a class
+            # Decorate a class, Topic is extended immediately
             @mod.extend(Topic)
             class CustomTopic(object):
                 ... custom topic fields ...
 
-            # Decorate a callback
+            # Decorate a callback, Topic extension is deferred
             @mod.extend('Topic')
             def extend(base):
                 class CustomTopic(base):
@@ -289,17 +300,25 @@ class Mod(object):
 
                 return CustomTopic
 
-        The callback version may be useful to resolve import issues or otherwise
-        move your class definition inside a function
+        The callback version may be useful to resolve import issues, or to
+        defer your class definition until after all other mods are loaded
+        (for example, to use `mod.require`)
 
         """
         if name not in self.extendable_registry and name not in self.extendable_roots:
             raise ClassExtensionError(
                 'No @mod.extendable objects found under: {!r}'.format(name))
 
-        def wrapper(func):
-            self.extend_registry[name].append(func)
-            return func
+        def wrapper(extension):
+            if inspect.isclass(extension):
+                # `extension` is a decorated class, return the generated base
+                # so that their decorated class is replaced with the actual
+                # class in the extendable class's hierarchy
+                return self.extend_object(name, extension)
+            else:
+                # `extension` is a callback, so just add it to the deferred list
+                self.deferred_extension_registry[name].append(extension)
+                return extension
         return wrapper
 
     def install_check_factory(self):
@@ -448,129 +467,170 @@ class Mod(object):
             # cls is a string
             return obj.rsplit(self.EXTENDED_OBJECT_SUFFIX, 1)[0]
 
-    def generate_extended_base(self, cls, extension):
+    def generate_extension_base(self, obj, extension):
+        """ Given an object to extend and an extension, generate a new
+        base for the object
+        """
+        root = obj._root_
         if inspect.isclass(extension):
             # If a class, convert it to the same class that was marked as
             # @mod.extendable
-            return cls.__class__(extension.__name__, (cls,), dict(extension.__dict__))
+            return root.__class__(extension.__name__, (root,), dict(extension.__dict__))
         else:
             # Otherwise assume a callable and pass in the base class
-            return extension(cls)
+            return extension(root)
 
-    def load_model_extensions(self, name, obj):
+    def apply_extensions(self, obj, bases, extensions):
+        """ Extends the given object with new bases
+
+        `obj`:  The object to extend
+        `bases`:  Tuple of new bases to insert into `obj.__bases__`
+        `extensions`: Tuple of `@extend` objects that provided each
+            base in the `bases` tuple
+        """
         root = obj._root_
 
-        # objects can be registered by name or by reference
-        extensions = self.extend_registry[name] + self.extend_registry[obj]
-        extended_bases = (self.generate_extended_base(root, extension) for extension in extensions)
-        filtered_bases = tuple(base for base in extended_bases if base is not None)
-        if filtered_bases:
-            return filtered_bases, extensions
+        # Extensions may return `None` as a base, filter those out
+        extension_bases = tuple(base for base in bases if base is not None)
+        if not any(extension_bases):
+            return
+
+        logger.debug('Extending {} with: {}'.format(
+            root, ', '.join(map(str, extension_bases))))
+
+        # Remove root from bases (if present), and construct a new set of
+        # bases from (previous extensions) + (any new extensions)
+        final_bases = tuple(
+            base for base in obj.__bases__ if base is not root
+        ) + extension_bases
+
+        try:
+            obj.__bases__ = final_bases
+
+            if isinstance(obj, EntityMeta):
+                # When extending a pony orm `db.Entity`, we need to monkey patch
+                # some properties that are set in `EntityMeta.__new__` that
+                # depend on the entity's current `__bases__`.  Since we
+                # change `__bases__` after `__new__` has run, some properties
+                # are incorrect (for example parent class table fields, etc)
+                #
+                # To fix this, we create a temporary subclass so that
+                # EntityMeta.__new__ is called with all mod base clases,
+                # and then copy over those properties to our Empty class
+                #
+                # We can't just use the temporary subclass, because our
+                # Empty class is a live reference to the object back in
+                # the original module, so we need to mutate it.
+                tempobj_name = obj.__name__ + '_TEMP'
+                tempobj = obj.__class__(tempobj_name, final_bases, {})
+
+                # _id_ holds a creation counter.  `obj` was created before
+                # the mod classes, so it's `_id_` is lower, but we need it to
+                # be greater so that it is initialized after them (since
+                # we are moving it from above to below them in the class
+                # hierarchy)
+                obj._id_ = tempobj._id_
+
+                # Set the correct columns
+                obj._adict_ = tempobj._adict_
+                obj._attrs_ = tempobj._attrs_
+                obj._base_attrs_ = tempobj._base_attrs_
+
+                # Fix base classes of our new class
+                obj._all_bases_ = tempobj._all_bases_
+                obj._direct_bases_ = tempobj._direct_bases_
+
+                # Add our new subclass to all parent classes
+                for parent_class in tempobj.__mro__:
+                    if hasattr(parent_class, '_subclasses_'):
+                        parent_class._subclasses_.discard(tempobj)
+                        parent_class._subclasses_.add(obj)
+
+                # Clean up traces of our temporary class
+                # Should be no more references to tempobj after this
+                del obj._database_.entities[tempobj_name]
+                del obj._database_.__dict__[tempobj_name]
+
+        except Exception as e:
+            extensions = tuple(extension for extension, base in zip(extensions, bases) if base is not None)
+            raise e.__class__(
+                '{}\n'
+                'when constructing {} from new bases:\n'
+                '{}:'.format(
+                    e, obj, '\n'.join('{}'.format(base) for extension, base in zip(extensions, extension_bases))
+                )
+            )
+
+    def extend_object(self, name, extension):
+        """ Extend an object with a single extension
+
+        `name`:  The object or name of object to extend
+        `extension`:  The extension to apply
+
+        Returns the generated extension base
+
+        The object being extended is in the form::
+
+            @mod.extendable
+            class Topic(...):
+                ...
+
+            class EmptyTopic(Topic):
+                pass
+
+        In order to extend these classes, we will load any custom classes
+        from installed mods and insert them in the hierarchy::
+
+            @mod.extendable
+            class Topic(...):
+                ...
+
+            class CustomModA(Topic):
+                ...
+
+            class CustomModB(Topic):
+                ...
+
+            class EmptyTopic(CustomModA, CustomModB):
+                pass
+
+        By changing `EmptyTopic.__bases__` to `(CustomModA, CustomModB, ...)`
+        """
+        if name in self.extendable_registry:
+            # name is a string, get the object
+            obj = self.extendable_registry[name]
+        elif name in self.extendable_roots:
+            # name is the object itself
+            obj = name
         else:
-            return (), ()
+            raise ClassExtensionError(
+                'No @mod.extendable objects found under: {!r}'.format(name))
+
+        # Generate the new base class from the extension
+        extended_base = self.generate_extension_base(obj, extension)
+
+        # Modify the object with the new base class
+        self.apply_extensions(obj, (extended_base,), (extension,))
+
+        # Return the generated base class to the calling extension
+        return extended_base
+
+    def load_deferred_extensions(self, name, obj):
+        # objects can be registered by name or by reference
+        extensions = self.deferred_extension_registry[name] + self.deferred_extension_registry[obj]
+        extended_bases = tuple(self.generate_extension_base(obj, extension) for extension in extensions)
+        return extended_bases, extensions
 
     def extend_objects(self):
-        """ The registry contains "empty subclass" objects in the form::
+        """ Process any extensions in `deferred_extension_registry`, then
+        clear the registry
 
-                @mod.extendable
-                class Topic(...):
-                    ...
-
-                class EmptyTopic(Topic):
-                    pass
-
-            In order to extend these classes, we will load any custom classes
-            from installed mods and insert them in the hierarchy::
-
-                @mod.extendable
-                class Topic(...):
-                    ...
-
-                class CustomModA(Topic):
-                    ...
-
-                class CustomModB(Topic):
-                    ...
-
-                class EmptyTopic(CustomModA, CustomModB):
-                    pass
-
-            By changing `EmptyTopic.__bases__` to `(CustomModA, CustomModB, ...)`
         """
         for name, obj in self.extendable_registry.items():
-            root = obj._root_
+            bases, extensions = self.load_deferred_extensions(name, obj)
+            self.apply_extensions(obj, bases, extensions)
 
-            # Load all bases generated by installed mods, to be inserted
-            new_bases, extensions = self.load_model_extensions(name, obj)
-            if not new_bases:
-                continue
-
-            logger.debug('Extending {} with:\n    {}'.format(
-                root, '\n    '.join(map(str, new_bases))))
-
-            # Remove root from bases (if present), and construct a new set of
-            # bases from (previous extensions) + (any new extensions)
-            bases = tuple(
-                base for base in obj.__bases__ if base is not root
-            ) + new_bases
-
-            try:
-                obj.__bases__ = bases
-
-                if isinstance(obj, EntityMeta):
-                    # When extending pony orm `db.Entity`, we need to monkey patch
-                    # some properties that are set in `EntityMeta.__new__` that
-                    # depend on the entity's current `__bases__`.  Since we
-                    # change `__bases__` after `__new__` has run, some properties
-                    # are incorrect (for example parent class table fields, etc)
-                    #
-                    # To fix this, we create a temporary subclass so that
-                    # EntityMeta.__new__ is called with all mod base clases,
-                    # and then copy over those properties to our Empty class
-                    #
-                    # We can't just use the temporary subclass, because our
-                    # Empty class is a live reference to the object back in
-                    # the original module, so we need to mutate it.
-                    tempobj_name = obj.__name__ + '_TEMP'
-                    tempobj = obj.__class__(tempobj_name, bases, {})
-
-                    # _id_ holds a creation counter.  `obj` was created before
-                    # the mod classes, so it's `_id_` is lower, but we need it to
-                    # be greater so that it is initialized after them (since
-                    # we are moving it from above to below them in the class
-                    # hierarchy)
-                    obj._id_ = tempobj._id_
-
-                    # Set the correct columns
-                    obj._adict_ = tempobj._adict_
-                    obj._attrs_ = tempobj._attrs_
-                    obj._base_attrs_ = tempobj._base_attrs_
-
-                    # Fix base classes of our new class
-                    obj._all_bases_ = tempobj._all_bases_
-                    obj._direct_bases_ = tempobj._direct_bases_
-
-                    # Add our new subclass to all parent classes
-                    for parent_class in tempobj.__mro__:
-                        if hasattr(parent_class, '_subclasses_'):
-                            parent_class._subclasses_.discard(tempobj)
-                            parent_class._subclasses_.add(obj)
-
-                    # Clean up traces of our temporary class
-                    # Should be no more references to tempobj after this
-                    del obj._database_.entities[tempobj_name]
-                    del obj._database_.__dict__[tempobj_name]
-
-            except Exception as e:
-                raise e.__class__(
-                    '{}\n'
-                    'when constructing {} from bases:\n'
-                    '{}:'.format(
-                        e, obj, '\n'.join('{}'.format(base) for extension, base in zip(extensions, bases))
-                    )
-                )
-
-        self.extend_registry = RegistryTypes.extend_registry()
+        self.deferred_extension_registry = RegistryTypes.deferred_extension_registry()
 
     def register_core_models(self):
         """ Ensure that core models are imported and registered as `extendable` """
