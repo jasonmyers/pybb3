@@ -76,40 +76,40 @@ class Mod(object):
             self.init_app(app)
 
     def init_app(self, app):
-        # If True, a `ModRequiredError` will be raised when mod.require('mod') fails
+        # If True, a `ModRequiredError` will be raised when mod.require('mod')
+        # fails to find the requested mod
         # If False, the mod will will be skipped (not installed)
         app.config.setdefault('MODS_FAIL_ON_MISSING_REQUIRED', False)
 
         # Directory where local mods are installed.  Defaults to APP_DIR/mods
         app.config.setdefault('INSTALLED_MODS_DIR', os.path.join(app.config['APP_DIR'], "mods"))
 
-        """ List of mods to load
-
-        Use string ellipses ('...') to separate mods that should be loaded
-        first and last.
-
-        If ellipses is found, all mods found in `INSTALLED_MODS_DIR` will
-        be loaded then.  Remove the ellipses to disable this auto-loading of
-        those mods (and only load the ones you explicitely state here).
-
-        You can also use `DISABLED_MODS` to specifically disable some mods.
-
-        Example::
-
-            INSTALLED_MODS = [
-                'mod_a',   # Loaded first
-                'mod_b',   # Loaded second
-                '...',     # Load other mods found in INSTALLED_MODS_DIR, except
-                'mod_y',   # Loaded second to last
-                'mod_z',   # Loaded last
-            ]
-
-        Default is `['...']` which auto loads all mods found in
-        `INSTALLED_MODS_DIR`, in any order
-        """
+        # List of mods to load
+        #
+        # Use string ellipses ('...') to separate mods that should be loaded
+        # first and last.
+        #
+        # If ellipses is found, all mods found in `INSTALLED_MODS_DIR` will
+        # be loaded then.  Remove the ellipses to disable this auto-loading of
+        # those mods (and only load the ones you explicitly list here).
+        #
+        # You can also use `DISABLED_MODS` to specifically disable some mods.
+        #
+        # Example::
+        #
+        #     INSTALLED_MODS = [
+        #         'mod_a',   # Loaded first
+        #         'mod_b',   # Loaded second
+        #         '...',     # Load other mods found in INSTALLED_MODS_DIR, except
+        #         'mod_y',   # Loaded second to last
+        #         'mod_z',   # Loaded last
+        #     ]
+        #
+        # Default is `['...']` which auto loads all mods found in
+        # `INSTALLED_MODS_DIR`, in any order
         app.config.setdefault('INSTALLED_MODS', ['...'])
 
-        # Mods that are present in `INSTALLED_MODS_DIR` but shouldn't be installed
+        # Mods that are present in `INSTALLED_MODS_DIR`, but shouldn't be installed
         app.config.setdefault('DISABLED_MODS', [])
 
         self.install_mods(app)
@@ -291,6 +291,7 @@ class Mod(object):
 
         The callback version may be useful to resolve import issues or otherwise
         move your class definition inside a function
+
         """
         if name not in self.extendable_registry and name not in self.extendable_roots:
             raise ClassExtensionError(
