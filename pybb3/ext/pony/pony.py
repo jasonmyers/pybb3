@@ -20,8 +20,6 @@ class Pony(object):
 
     def __init__(self, app=None):
         self.app = app
-        if app is not None:
-            self.init_app(app)
 
         # Need to instantiate empty Database() here so that imported models have
         # access to db.Entity.  We'll bind it later to a provider in `init_app`
@@ -30,6 +28,9 @@ class Pony(object):
 
         self._exempt_db_session_views = set()
         self._exempt_db_session_blueprints = set()
+
+        if app is not None:
+            self.init_app(app)
 
     def init_app(self, app):
         app.config.setdefault('PONY_DATABASE_PROVIDER', 'sqlite')
