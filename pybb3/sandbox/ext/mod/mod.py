@@ -29,6 +29,15 @@ class ModInstallError(ModError): pass
 class ClassExtensionError(ModError): pass
 
 
+class RegistryTypes:
+    extendable_registry = OrderedDict
+    extendable_roots = dict
+    extend_registry = lambda: defaultdict(list)
+    installed_registry = dict
+    required_registry = lambda: defaultdict(dict)
+    is_installed_callback_registry = dict
+
+
 class Mod(object):
     EXTENDED_OBJECT_SUFFIX = 'Extended'
 
@@ -42,24 +51,25 @@ class Mod(object):
 
         # Holds which classes have been decorated with `@mod.extendable`
         #     {'registered name': <class>}
-        self.extendable_registry = OrderedDict()
-
-        # Holds a mapping of extendable objects to their original bases
-        self.extendable_objects = {}
+        # Cleared after extensions are performed
+        self.extendable_registry = RegistryTypes.extendable_registry()
 
         # For each extendable class, holds which classes have been
         # decorated with `@mod.extend`
         #     {'registered name': [extensions, ...],
         #      <class>: [extensions, ...]}
-        self.extend_registry = defaultdict(list)
+        self.extend_registry = RegistryTypes.extend_registry()
+
+        # Holds a mapping of extendable objects to their root (original base)
+        self.extendable_roots = RegistryTypes.extendable_roots()
 
         # Holds the list of installed mod names with their version
         #     {'mod name': 'mod version'}
-        self.installed_registry = {}
+        self.installed_registry = RegistryTypes.installed_registry()
 
         # Holds a mapping of the dependencies for each mod
         #     {'mod name': {'required mod name': 'required version'}}
-        self.required_registry = defaultdict(dict)
+        self.required_registry = RegistryTypes.required_registry()
 
     def init_app(self, app):
         # If True, a `ModRequiredError` will be raised when mod.require('mod') fails
@@ -104,8 +114,8 @@ class Mod(object):
         """ Decorator to register an class as extendable
 
         `obj`:  The class to be extended
-        `name`:  The name to register this class under.  If omitted, the
-            `__name__` of the class is used
+        `name`:  The name to register this class under.  If omitted,
+            `obj.__name__` is used
 
         For classes, extending the class inserts your custom class as a base class
         in the hierarchy (at the same level as any other mods extending this class)
@@ -205,10 +215,10 @@ class Mod(object):
                 pass
 
         """
-        if obj in self.extendable_objects:
+        if obj in self.extendable_roots:
             # mod.extendable(obj)
-            # object has already been extended, return the original base
-            return self.extendable_objects[obj]
+            # object has already been extended, return the root (original base)
+            return self.extendable_roots[obj]
 
         if isinstance(obj, six.string_types):
             # @mod.extendable('name')
@@ -231,8 +241,12 @@ class Mod(object):
         obj._disable_discriminator_ = True
         extended = obj.__class__(self.extended_object_name(obj), (obj,), {})
         extended.__name__ = name
+        if not hasattr(extended, '_root_'):
+            # Track the original base
+            # This is already set on pony Entity subclasses
+            extended._root_ = obj
         self.extendable_registry[name] = extended
-        self.extendable_objects[extended] = obj
+        self.extendable_roots[extended] = obj
 
         # We return an "empty" subclass of the decorated class, so that
         # it is usable in the immediate file.  Later we will replace the
@@ -274,7 +288,7 @@ class Mod(object):
         The callback version may be useful to resolve import issues or otherwise
         move your class definition inside a function
         """
-        if name not in self.extendable_registry and name not in self.extendable_objects:
+        if name not in self.extendable_registry and name not in self.extendable_roots:
             raise ClassExtensionError(
                 'No @mod.extendable objects found under: {!r}'.format(name))
 
@@ -291,7 +305,7 @@ class Mod(object):
         extension = self
 
         class IsModInstalled(object):
-            callback_registry = {}
+            callback_registry = RegistryTypes.is_installed_callback_registry()
 
             def __init__(self, name, version=None):
                 # Name / minimum version of the mod
@@ -342,7 +356,7 @@ class Mod(object):
                     if check:
                         callback()
 
-                IsModInstalled.callback_registry = {}
+                IsModInstalled.callback_registry = RegistryTypes.is_installed_callback_registry()
 
         return IsModInstalled
 
@@ -439,16 +453,16 @@ class Mod(object):
             return extension(cls)
 
     def load_model_extensions(self, name, obj):
-        base = obj.__base__
+        root = obj._root_
 
         # objects can be registered by name or by reference
         extensions = self.extend_registry[name] + self.extend_registry[obj]
-        extended_bases = (self.generate_extended_base(base, extension) for extension in extensions)
+        extended_bases = (self.generate_extended_base(root, extension) for extension in extensions)
         filtered_bases = tuple(base for base in extended_bases if base is not None)
         if filtered_bases:
             return filtered_bases, extensions
         else:
-            return (base,), (None,)
+            return (), ()
 
     def extend_objects(self):
         """ The registry contains "empty subclass" objects in the form::
@@ -479,18 +493,23 @@ class Mod(object):
             By changing `EmptyTopic.__bases__` to `(CustomModA, CustomModB, ...)`
         """
         for name, obj in self.extendable_registry.items():
-            base = obj.__base__
+            root = obj._root_
 
             # Load all bases generated by installed mods, to be inserted
-            bases, extensions = self.load_model_extensions(name, obj)
-            if bases[0] is base:
-                logger.debug('No extensions found for {}'.format(str(base)))
+            new_bases, extensions = self.load_model_extensions(name, obj)
+            if not new_bases:
                 continue
 
+            logger.debug('Extending {} with:\n    {}'.format(
+                root, '\n    '.join(map(str, new_bases))))
+
+            # Remove root from bases (if present), and construct a new set of
+            # bases from (previous extensions) + (any new extensions)
+            bases = tuple(
+                base for base in obj.__bases__ if base is not root
+            ) + new_bases
+
             try:
-                logger.debug('Extending {} with:\n    {}'.format(
-                    obj.__base__, '\n    '.join(map(str, bases))))
-                # Switch `EmptyTopic` bases from `Topic` to the list of mod bases
                 obj.__bases__ = bases
 
                 if isinstance(obj, EntityMeta):
@@ -545,6 +564,8 @@ class Mod(object):
                         e, obj, '\n'.join('{}'.format(base) for extension, base in zip(extensions, bases))
                     )
                 )
+
+        self.extend_registry = RegistryTypes.extend_registry()
 
     def register_core_models(self):
         """ Ensure that core models are imported and registered as `extendable` """
