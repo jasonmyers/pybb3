@@ -34,8 +34,6 @@ class Mod(object):
 
     def __init__(self, app=None):
         self.app = app
-        if app is not None:
-            self.init_app(app)
 
         # Have the mods all been imported yet
         self.mods_loaded = False
@@ -60,6 +58,9 @@ class Mod(object):
         # Holds a mapping of the dependencies for each mod
         #     {'mod name': {'required mod name': 'required version'}}
         self.required_registry = defaultdict(dict)
+
+        if app is not None:
+            self.init_app(app)
 
     def init_app(self, app):
         # If True, a `ModRequiredError` will be raised when mod.require('mod') fails
