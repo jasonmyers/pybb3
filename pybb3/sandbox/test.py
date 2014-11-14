@@ -53,3 +53,18 @@ with db_session:
     if mod.installed('icons'):
         icon = Icon(picture='rabbit')
         message = Message(icon=icon, title='test')
+
+
+with db_session:
+    p = Person[1]
+
+with db_session:
+    p2 = Person(name='p2', age=2, password='rabbit')
+
+    with db_session:
+        p3 = Person(name='p3', age=3, password='rabbit')
+    commit()
+    p4 = Person(name='p4', age=4, password='rabbit')
+
+import IPython
+IPython.embed()
