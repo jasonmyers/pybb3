@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from pybb3.public.forms import LoginForm
 from pybb3.user.forms import RegisterForm
+from pybb3.user.models import User
 
 
 class TestRegisterForm:
