@@ -113,7 +113,7 @@ class Mod(object):
         app.config.setdefault('INSTALLED_MODS', ['...'])
 
         # Mods that are present in `INSTALLED_MODS_DIR`, but shouldn't be installed
-        app.config.setdefault('DISABLED_MODS', [])
+        app.config.setdefault('DISABLED_MODS', set())
 
         self.install_mods(app)
 
@@ -659,6 +659,7 @@ class Mod(object):
 
     def populate_mod_cache(self, installed_mods_dir=None, installed_mods=None,
                            disabled_mods=None, fail_on_missing_required=False):
+        """ Import mods to perform extensions """
         if self.installed_registry:
             return
 
@@ -666,26 +667,27 @@ class Mod(object):
             isntalled_mods = []
 
         if disabled_mods is None:
-            disabled_mods = []
+            disabled_mods = set()
+        else:
+            disabled_mods = set(disabled_mods)
 
-        # Import mods to load object_extension_registry
-        files = glob.glob(
-            os.path.join(installed_mods_dir, '*.py')
-        )
-        modules = [os.path.basename(f)[:-3] for f in files]
-        mod_names = set(module for module in modules if module != '__init__')
+        # This is the set of *.py files found in `INSTALLED_MOD_DIR` config
+        local_mods_files = glob.glob(os.path.join(installed_mods_dir, '*.py'))
+        local_mods = {os.path.basename(f)[:-3] for f in local_mods_files}
+        local_mods.discard('__init__')
 
-        installed_mods_iter = iter(installed_mods)
+        # This is the list of mods specified in `INSTALLED_MODS` config
+        installed_mods_iter = (mod for mod in installed_mods if mod not in disabled_mods)
         load_first = list(itertools.takewhile(lambda m: m != '...', installed_mods_iter))
         load_last = list(installed_mods_iter)
 
-        # These mods are found in `INSTALLED_MOD_DIR` but not specified
+        # These are mods found in `INSTALLED_MOD_DIR` but not specified
         # in `INSTALLED_MODS`.  Only loaded if '...' is present in `INSTALLED_MODS`
-        unordered_mods = set(mod_names) - set(load_first) - set(load_last)
+        unordered_mods = local_mods - set(load_first) - set(load_last) - disabled_mods
 
         # First install any mods listed first in the `mod_load_order` configuration
         for first_mod in load_first:
-            if first_mod not in mod_names:
+            if first_mod not in local_mods:
                 logger.warning('Mod {!r} in mod_load_order list not found, skipping'.format(first_mod))
                 continue
             self.load_mod(first_mod, fail_on_missing_required=fail_on_missing_required)
@@ -698,7 +700,7 @@ class Mod(object):
 
         # Finally install any mods listed last in the `mod_load_order` configuration
         for last_mod in load_last:
-            if last_mod not in mod_names:
+            if last_mod not in local_mods:
                 logger.warning('Mod {!r} in mod_load_order list not found, skipping'.format(last_mod))
                 continue
             self.load_mod(last_mod, fail_on_missing_required=fail_on_missing_required)
