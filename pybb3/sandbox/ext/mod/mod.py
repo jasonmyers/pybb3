@@ -245,6 +245,7 @@ class Mod(object):
                     obj, name, self.extendable_registry[name]
                 ))
 
+        self.disable_discriminator()
         obj._disable_discriminator_ = True
         extended = obj.__class__(self.extended_object_name(obj), (obj,), {})
         extended.__name__ = name
@@ -707,23 +708,25 @@ class Mod(object):
 
     def disable_discriminator(self):
         from pony.orm.core import Discriminator
-
         original_create_default_attr = Discriminator.create_default_attr
+
+        if getattr(original_create_default_attr, '_disabled', False):
+            return
+
+        logger.debug('Disabling pony _discriminator_ for extended models')
 
         @functools.wraps(original_create_default_attr)
         def disabled_create_default_attr(entity):
             if getattr(entity, '_disable_discriminator_', False):
                 return
             return original_create_default_attr(entity)
+        disabled_create_default_attr._disabled = True
 
         Discriminator.create_default_attr = disabled_create_default_attr
 
     def install_mods(self, app):
         if self.mods_loaded:
             return
-
-        logger.debug('Disable pony _discriminator_ for extended models')
-        self.disable_discriminator()
 
         logger.debug('Importing core models')
         self.register_core_models()
