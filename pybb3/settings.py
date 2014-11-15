@@ -47,6 +47,7 @@ class DevConfig(Config):
     DEBUG_TB_ENABLED = True
     ASSETS_DEBUG = True  # Don't bundle/minify static assets
     CACHE_TYPE = 'simple'  # Can be "memcached", "redis", etc.
+    WTF_CSRF_ENABLED = True
 
 
 class TestConfig(Config):

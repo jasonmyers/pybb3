@@ -44,6 +44,9 @@ def register_extensions(app):
     login_manager.init_app(app)
     debug_toolbar.init_app(app)
 
+    app.view_functions['debugtoolbar.sql_select'] = csrf.exempt(app.view_functions['debugtoolbar.sql_select'])
+    app.view_functions['debugtoolbar.sql_explain'] = csrf.exempt(app.view_functions['debugtoolbar.sql_explain'])
+
 
 def register_blueprints(app):
     app.register_blueprint(public.views.blueprint)
