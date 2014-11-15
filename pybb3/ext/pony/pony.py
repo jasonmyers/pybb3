@@ -6,7 +6,8 @@ import six
 
 from pony.orm import db_session, Database
 
-from flask import Blueprint, request
+from flask import Blueprint
+
 # Find the stack on which we want to store the database connection.
 # Starting with Flask 0.9, the _app_ctx_stack is the correct one,
 # before that we need to use the _request_ctx_stack.
@@ -55,7 +56,7 @@ class Pony(object):
         app.add_url_rule = self.patch_add_url_rule(app)
 
     def connect(self, app):
-        if self.db.schema:
+        if self.schema:
             return self.db
 
         provider = app.config['PONY_DATABASE_PROVIDER']
@@ -72,8 +73,8 @@ class Pony(object):
         #db.bind('postgres', user='', password='', host='', database='')
         #db.bind('mysql', host='', user='', passwd='', db='')
         #db.bind('oracle', 'user/password@dsn')
-
-        self.generate_mapping(check_tables=True, create_tables=True)
+        if not app.config['TESTING']:
+            self.generate()
         return self.db
 
     @property
@@ -104,9 +105,16 @@ class Pony(object):
     def generate_mapping(self):
         return self.db.generate_mapping
 
+    def generate(self):
+        return self.generate_mapping(create_tables=True, check_tables=True)
+
     @property
     def commit(self):
         return self.db.commit
+
+    @property
+    def schema(self):
+        return self.db.schema
 
     def nosession(self, view):
         """ Decorator to disable the automatic `@db_session` wrapping on a
