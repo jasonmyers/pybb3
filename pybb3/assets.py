@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from flask.ext.assets import Bundle, Environment
 
 css = Bundle(
+    "css/reset.css",
     "libs/bootstrap/dist/css/bootstrap.css",
     "css/style.css",
     filters="cssmin",
