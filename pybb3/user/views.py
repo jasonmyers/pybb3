@@ -8,8 +8,3 @@ blueprint = Blueprint(
     "user", __name__, url_prefix='/users',
     static_folder="../static", template_folder='../templates/users')
 
-
-@blueprint.route("/")
-@login_required
-def members():
-    return render_template("members.html")

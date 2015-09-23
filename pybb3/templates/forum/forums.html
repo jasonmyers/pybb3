@@ -1,0 +1,52 @@
+{% extends 'layout.html' %}
+
+
+{% block content %}
+    <ul>
+    {% for forum_group in forum_groups %}
+        {% if forum_group[0].is_category %}
+            {% if forum_group[0].forums or show_empty_categories %}
+                <li>
+                    <span class='category-name'>
+                        <a href="{{ url_for('forum.forum', forum=forum_group[0]) }}">{{ forum_group[0].name }}</a>
+                    </span>
+                </li>
+                <li>
+                    <ul>
+                        {% for forum in forum_group[0].ordered_forums %}
+                            <li>
+                                <span class='forum-name'>
+                                    <a href="{{ url_for('forum.forum', forum=forum) }}">{{ forum.name }}</a>
+                                </span><br/>
+                                <span class='forum-desc'>{{ forum.desc }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endif %}
+        {% else %}
+                <li>
+                    <span class='category-name'>
+                        Forum
+                    </span>
+                </li>
+                <li>
+                    <ul>
+                        {% for forum in forum_group %}
+                            <li>
+                                <span class='forum-name'>
+                                    <a href="{{ url_for('forum.forum', forum=forum) }}">{{ forum.name }}</a>
+                                </span><br/>
+                                <span class='forum-desc'>{{ forum.desc }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+    <a href="{{ url_for('forum.new_category') }}">New Category</a>
+    <a href="{{ url_for('forum.new_forum') }}">New Forum</a>
+    <a href="{{ url_for('forum.new_link') }}">New Link</a>
+    {% if not show_empty_categories %}<a href="{{ url_for('forum.forums', show_empty_categories=True) }}">Show Empty Categories</a>{% endif %}
+{% endblock %}

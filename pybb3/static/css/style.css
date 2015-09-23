@@ -89,3 +89,9 @@ div.flDebugPanelTitle > a {
     text-indent: 0 !important;
     color: transparent !important;
 }
+
+
+table {
+    border: 1px solid grey;
+    width: 100%;
+}

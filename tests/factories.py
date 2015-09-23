@@ -5,6 +5,7 @@ from factory import Sequence, PostGenerationMethodCall
 from .pony_factory import PonyModelFactory
 
 from pybb3.user.models import User
+from pybb3.forum.models import Forum
 from pybb3.database import db
 
 
@@ -23,3 +24,10 @@ class UserFactory(BaseFactory):
     class Meta:
         model = User
 
+
+class ForumFactory(BaseFactory):
+    name = Sequence(lambda n: "Forum {0}".format(n))
+    desc = Sequence(lambda n: "Description {0}".format(n))
+
+    class Meta:
+        model = Forum

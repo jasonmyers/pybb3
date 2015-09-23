@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from __future__ import unicode_literals
 
 import datetime
+from flask import url_for
 
 from pybb3.mods import mod
 from pybb3.database import (
@@ -65,3 +66,6 @@ class Topic(db.Entity):
 
     def before_update(self):
         self.validate()
+
+    def url(self):
+        return url_for('topic.topic', topic=self)

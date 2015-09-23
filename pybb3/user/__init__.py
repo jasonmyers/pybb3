@@ -1,3 +1,3 @@
-"""The user module."""
-
+from . import forms
+from . import models
 from . import views

@@ -14,9 +14,12 @@ from pybb3.extensions import (
     db,
     login_manager,
     debug_toolbar,
+    requestarg,
 )
-from pybb3 import public, user
+from pybb3 import public, user, forum, post, topic
 from pybb3 import patches
+from pybb3 import utils
+from pybb3 import converters
 
 
 def create_app(config_object=ProdConfig):
@@ -27,11 +30,27 @@ def create_app(config_object=ProdConfig):
     """
     app = Flask(__name__)
     app.config.from_object(config_object)
+
+    register_converters(app)
     register_extensions(app)
     register_blueprints(app)
     register_errorhandlers(app)
 
     return app
+
+
+def register_converters(app):
+    app.url_map.converters['flag'] = converters.FlagConverter
+
+    for entity_class in [
+        user.models.User,
+        forum.models.Forum,
+        topic.models.Topic,
+        post.models.Post,
+    ]:
+        converter = converters.EntityLoader.from_class(entity_class)
+        converter_name = converter.__name__.replace('Loader', '')
+        app.url_map.converters[converter_name] = converter
 
 
 def register_extensions(app):
@@ -43,14 +62,17 @@ def register_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
     debug_toolbar.init_app(app)
-
     app.view_functions['debugtoolbar.sql_select'] = csrf.exempt(app.view_functions['debugtoolbar.sql_select'])
     app.view_functions['debugtoolbar.sql_explain'] = csrf.exempt(app.view_functions['debugtoolbar.sql_explain'])
 
+    requestarg.init_app(app)
+
 
 def register_blueprints(app):
-    app.register_blueprint(public.views.blueprint)
     app.register_blueprint(user.views.blueprint)
+    app.register_blueprint(forum.views.blueprint)
+    app.register_blueprint(topic.views.blueprint)
+    app.register_blueprint(post.views.blueprint)
 
 
 def register_errorhandlers(app):

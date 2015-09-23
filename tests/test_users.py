@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Model unit tests."""
 from __future__ import unicode_literals
 
 import datetime

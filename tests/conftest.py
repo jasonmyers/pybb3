@@ -2,6 +2,7 @@
 """Defines fixtures available to all tests."""
 from __future__ import unicode_literals
 import functools
+from flask import Flask
 
 import pytest
 from webtest import TestApp
@@ -16,19 +17,36 @@ from .factories import UserFactory
 
 @pytest.yield_fixture
 def app():
+    """ The pybb3 app """
     _app = create_app(TestConfig)
     ctx = _app.test_request_context()
     ctx.push()
 
-    yield _app
+    _app.client = TestApp(_app)
 
-    ctx.pop()
+    try:
+        yield _app
+    finally:
+        del _app.client
+        ctx.pop()
 
 
-@pytest.fixture
-def testapp(app):
-    """A Webtest app."""
-    return TestApp(app)
+@pytest.yield_fixture
+def newapp():
+    """ A blank app """
+    _app = Flask(__name__)
+    _app.config.from_object(TestConfig)
+
+    ctx = _app.test_request_context()
+    ctx.push()
+
+    _app.client = TestApp(_app)
+
+    try:
+        yield _app
+    finally:
+        del _app.client
+        ctx.pop()
 
 
 def pytest_runtest_call(item):
@@ -63,7 +81,7 @@ def db_schema():
 
 @pytest.yield_fixture
 def db(app, db_schema):
-    """ This fixture provides access to the real app's database and models
+    """ This fixture provides access to the pybb3's database and models
 
     It is automatically wiped before and after your test runs
 
@@ -73,21 +91,23 @@ def db(app, db_schema):
     db.drop_all_tables(with_all_data=True)
 
     db.create_tables(check_tables=False)
-    yield db
 
-    db.drop_all_tables(with_all_data=True)
+    try:
+        yield db
+    finally:
+        db.drop_all_tables(with_all_data=True)
 
 
 @pytest.yield_fixture
-def udb(app):
+def newdb(app):
     """ This fixture provides access to an empty, unmapped database, which you
     can use to define entities during your test
 
-    Note::  You must call `udb.generate()` after defining your entities,
+    Note::  You must call `newdb.generate()` after defining your entities,
     and before running any queries, e.g.
 
-    def unmapped_test(udb):
-        db = udb
+    def unmapped_test(newdb):
+        db = newdb
         class Topic(db.Entity):
             ...
 
@@ -99,8 +119,10 @@ def udb(app):
 
     """
     db = Pony(app=app)
-    yield db
-    db.drop_all_tables(with_all_data=True)
+    try:
+        yield db
+    finally:
+        db.drop_all_tables(with_all_data=True)
 
 
 @pytest.fixture

@@ -354,8 +354,8 @@ class TestExtendable:
 class TestModPonyEntity:
 
     @pytest.fixture
-    def extendable_model(self, udb, mod):
-        db = udb
+    def extendable_model(self, newdb, mod):
+        db = newdb
 
         @mod.extendable
         class User(db.Entity):
@@ -372,8 +372,8 @@ class TestModPonyEntity:
 
         return User
 
-    def test_no_extensions(self, udb, extendable_model):
-        db = udb
+    def test_no_extensions(self, newdb, extendable_model):
+        db = newdb
         db.generate()
 
         User = extendable_model
@@ -386,8 +386,8 @@ class TestModPonyEntity:
         with db.session:
             assert get(u for u in User if u.username == 'test').id == user.id
 
-    def test_one_extension(self, udb, mod, extendable_model):
-        db = udb
+    def test_one_extension(self, newdb, mod, extendable_model):
+        db = newdb
         User = extendable_model
 
         @mod.extend(User)
@@ -414,8 +414,8 @@ class TestModPonyEntity:
         with db.session:
             assert get(u for u in User if u.email == 'test@test').id == user.id
 
-    def test_two_extensions(self, udb, mod, extendable_model):
-        db = udb
+    def test_two_extensions(self, newdb, mod, extendable_model):
+        db = newdb
         User = extendable_model
 
         @mod.extend(User)
@@ -457,8 +457,8 @@ class TestModPonyEntity:
             user.role = 'moderator'
             assert not user.is_admin()
 
-    def test_discriminator_disabled(self, udb, mod, extendable_model):
-        db = udb
+    def test_discriminator_disabled(self, newdb, mod, extendable_model):
+        db = newdb
         User = extendable_model
 
         @mod.extend(User)

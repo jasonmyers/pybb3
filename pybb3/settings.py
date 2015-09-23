@@ -27,6 +27,10 @@ class Config(object):
         'flask_debugtoolbar.panels.logger.LoggingPanel',
         'flask_debugtoolbar.panels.profiler.ProfilerDebugPanel',
     )
+    PONY_AUTO_SESSION_EXEMPT_URLS = (
+        '/static',
+        '/_debug_toolbar/static/',
+    )
 
 
 class ProdConfig(Config):
@@ -41,10 +45,10 @@ class DevConfig(Config):
     """Development configuration."""
     ENV = 'dev'
     DEBUG = True
+    DEBUG_TB_ENABLED = True
     DB_NAME = 'dev.db'
     # Put the db file in project root
     PONY_DATABASE_URI = os.path.join(Config.PROJECT_ROOT, DB_NAME)
-    DEBUG_TB_ENABLED = True
     ASSETS_DEBUG = True  # Don't bundle/minify static assets
     CACHE_TYPE = 'simple'  # Can be "memcached", "redis", etc.
     WTF_CSRF_ENABLED = True
@@ -53,6 +57,8 @@ class DevConfig(Config):
 class TestConfig(Config):
     TESTING = True
     DEBUG = True
+    PRESERVE_CONTEXT_ON_EXCEPTION = False
+    DEBUG_TB_ENABLED = True
     PONY_DATABASE_URI = ':memory:'
     BCRYPT_LOG_ROUNDS = 1  # For faster tests
     WTF_CSRF_ENABLED = False  # Allows form testing

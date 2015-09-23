@@ -1,0 +1,29 @@
+{% extends 'layout.html' %}
+
+
+{% block content %}
+    <a href="{{ category.url() }}">{{ category.name }}</a><br/>
+    {{ category.desc }}
+
+    <table>
+    <tbody>
+    {% for forum in category.forums %}
+        <tr>
+            <td>
+                <span class='forum-name'>
+                    <a href="{{ forum.url() }}">{{ forum.name }}</a>
+                </span><br/>
+                <span class='forum-desc'>{{ forum.desc }}</span>
+            </td>
+        </tr>
+    {% else %}
+        <tr>
+            <td>
+            No forums
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    <a href="{{ url_for('forum.new_forum', category=category) }}">New Forum</a>
+{% endblock %}

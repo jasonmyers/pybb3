@@ -3,16 +3,19 @@
 from __future__ import unicode_literals
 
 import os
+import sys
 
 from flask.ext.script import Manager, Shell, Server
 
 from pybb3.app import create_app
 from pybb3.user.models import User
-from pybb3.settings import DevConfig, ProdConfig
+from pybb3.settings import DevConfig, TestConfig, ProdConfig
 from pybb3.database import db
 
 if os.environ.get("PYBB3_ENV") == 'prod':
     app = create_app(ProdConfig)
+elif 'test' in sys.argv:
+    app = create_app(TestConfig)
 else:
     app = create_app(DevConfig)
 

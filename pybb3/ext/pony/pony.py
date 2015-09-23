@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import functools
 
+import functools
+import re
 import six
 
 from pony.orm import db_session, Database
@@ -27,9 +28,6 @@ class Pony(object):
         self.db = Database()
         self.Entity = self.db.Entity
 
-        self._exempt_db_session_views = set()
-        self._exempt_db_session_blueprints = set()
-
         if app is not None:
             self.init_app(app)
 
@@ -40,7 +38,19 @@ class Pony(object):
         app.config.setdefault('PONY_DATABASE_PASSWORD', '')
         app.config.setdefault('PONY_DATABASE_HOST', '')
 
-        app.config.setdefault('PONY_AUTO_DB_SESSION_VIEWS', True)
+        # If `True`, wraps all requests in a `@db_session`
+        app.config.setdefault('PONY_AUTO_SESSION_VIEWS', True)
+
+        # Url regex patterns to be `match`ed, for urls to bypass auto
+        # `@db_session` wrapping
+        app.config.setdefault('PONY_AUTO_SESSION_EXEMPT_URLS', ())
+
+        # Combined compiled regex from `PONY_AUTO_SESSION_EXEMPT_URLS`
+        app.config.setdefault(
+            'PONY_AUTO_SESSION_EXEMPT_RE',
+            re.compile('|'.join(app.config['PONY_AUTO_SESSION_EXEMPT_URLS']))
+            if app.config['PONY_AUTO_SESSION_EXEMPT_URLS'] else None
+        )
 
         self.connect(app)
 
@@ -53,10 +63,10 @@ class Pony(object):
             return response
 
         # Automatically wrap flask routes in `@db_session`
-        app.add_url_rule = self.patch_add_url_rule(app)
+        self.wrap_requests_with_session(app)
 
     def connect(self, app):
-        if self.schema:
+        if self.schema or self.provider:
             return self.db
 
         provider = app.config['PONY_DATABASE_PROVIDER']
@@ -116,62 +126,23 @@ class Pony(object):
     def schema(self):
         return self.db.schema
 
-    def nosession(self, view):
-        """ Decorator to disable the automatic `@db_session` wrapping on a
-        particular route.  Usage::
+    @property
+    def provider(self):
+        return self.db.provider
 
-            @app.route(...)
-            @db.nosession
-            def myview(...):
-                ... no automatic db session ...
-
-        Note::  You can still use `db_session` inside such a view (as a
-        context manager, for example).  This just disables the automatic
-        wrapping.
-
+    def wrap_requests_with_session(self, app):
+        """ Patch `Flask.wsgi_app` to wrap all routes in a `@db_session`
+        if `app.config['PONY_AUTO_SESSION_VIEWS']` is enabled and the route
+        is not opted-out with `app.config['PONY_AUTO_SESSION_EXEMPT_URLS']`
         """
-        if isinstance(view, Blueprint):
-            self._exempt_db_session_blueprints.add(view.name)
-            return view
-        if isinstance(view, six.string_types):
-            view_location = view
-        else:
-            view_location = '%s.%s' % (view.__module__, view.__name__)
-        self._exempt_db_session_views.add(view_location)
-        return view
+        original_wsgi_app = app.wsgi_app
 
-    def patch_add_url_rule(self, app):
-        """ Patch `Flask.add_url_rule` to wrap all routes in a `@db_session`
-        if app.config['PONY_AUTO_DB_SESSION_VIEWS'] is enabled and the route
-        is not opted-out with `@db.exempt`
-        """
-        original_add_url_rule = app.add_url_rule
+        @functools.wraps(original_wsgi_app)
+        def wsgi_app(environ, start_response):
+            if app.config['PONY_AUTO_SESSION_VIEWS']:
+                exempt_re = app.config['PONY_AUTO_SESSION_EXEMPT_RE']
+                if not exempt_re or not exempt_re.match(environ['PATH_INFO']):
+                    return self.session(original_wsgi_app)(environ, start_response)
+            return original_wsgi_app(environ, start_response)
 
-        @functools.wraps(original_add_url_rule)
-        def add_url_rule(rule, endpoint=None, view_func=None, **options):
-            clean = functools.partial(original_add_url_rule, rule, endpoint=endpoint, view_func=view_func, **options)
-            wrapped = functools.partial(original_add_url_rule, rule, endpoint=endpoint, view_func=self.session(view_func), **options)
-
-            enable_auto_session = app.config['PONY_AUTO_DB_SESSION_VIEWS']
-
-            if not enable_auto_session:
-                return clean()
-
-            if self._exempt_db_session_views or self._exempt_db_session_blueprints:
-                if not endpoint:
-                    return clean()
-
-                if not view_func:
-                    return clean()
-
-                dest = '%s.%s' % (view_func.__module__, view_func.__name__)
-                if dest in self._exempt_db_session_views:
-                    return clean()
-
-                #blueprint = ??? # TODO figure out how to get blueprint from view
-                #if blueprint in self._exempt_db_session_blueprints:
-                #    return clean()
-
-            return wrapped()
-
-        return add_url_rule
+        app.wsgi_app = wsgi_app

@@ -15,9 +15,9 @@ from .factories import UserFactory
 
 class TestLoggingIn:
 
-    def test_can_log_in_returns_200(self, user, testapp):
+    def test_can_log_in_returns_200(self, user, app):
         # Goes to homepage
-        res = testapp.get('/')
+        res = app.client.get('/')
         # Fills out login form in navbar
         form = res.forms['loginForm']
         form['username'] = user.username
@@ -26,21 +26,21 @@ class TestLoggingIn:
         res = form.submit().follow()
         assert res.status_code == 200
 
-    def test_sees_alert_on_log_out(self, user, testapp):
-        res = testapp.get('/')
+    def test_sees_alert_on_log_out(self, user, app):
+        res = app.client.get('/')
         # Fills out login form in navbar
         form = res.forms['loginForm']
         form['username'] = user.username
         form['password'] = 'myprecious'
         # Submits
         res = form.submit().follow()
-        res = testapp.get(url_for('public.logout')).follow()
+        res = app.client.get(url_for('public.logout')).follow()
         # sees alert
         assert 'You are logged out.' in res
 
-    def test_sees_error_message_if_password_is_incorrect(self, user, testapp):
+    def test_sees_error_message_if_password_is_incorrect(self, user, app):
         # Goes to homepage
-        res = testapp.get('/')
+        res = app.client.get('/')
         # Fills out login form, password incorrect
         form = res.forms['loginForm']
         form['username'] = user.username
@@ -50,9 +50,9 @@ class TestLoggingIn:
         # sees error
         assert 'Invalid username or password' in res
 
-    def test_sees_error_message_if_username_doesnt_exist(self, user, testapp):
+    def test_sees_error_message_if_username_doesnt_exist(self, user, app):
         # Goes to homepage
-        res = testapp.get('/')
+        res = app.client.get('/')
         # Fills out login form, password incorrect
         form = res.forms['loginForm']
         form['username'] = 'unknown'
@@ -65,11 +65,11 @@ class TestLoggingIn:
 
 class TestRegistering:
 
-    def test_can_register(self, db, user, testapp):
+    def test_can_register(self, db, user, app):
         with db.session:
             old_count = count(u for u in User)
         # Goes to homepage
-        res = testapp.get('/')
+        res = app.client.get('/')
         # Clicks Create Account button
         res = res.click('Create account')
         # Fills out the form
@@ -85,9 +85,9 @@ class TestRegistering:
         with db.session:
             assert count(u for u in User) == old_count + 1
 
-    def test_sees_error_message_if_passwords_dont_match(self, user, testapp):
+    def test_sees_error_message_if_passwords_dont_match(self, user, app):
         # Goes to registration page
-        res = testapp.get(url_for('public.register'))
+        res = app.client.get(url_for('public.register'))
         # Fills out form, but passwords don't match
         form = res.forms['registerForm']
         form['username'] = 'foobar'
@@ -99,9 +99,9 @@ class TestRegistering:
         # sees error message
         assert 'Passwords must match' in res
 
-    def test_sees_error_message_if_password_too_short(self, user, testapp):
+    def test_sees_error_message_if_password_too_short(self, user, app):
         # Goes to registration page
-        res = testapp.get(url_for('public.register'))
+        res = app.client.get(url_for('public.register'))
         # Fills out form, but passwords don't match
         form = res.forms['registerForm']
         form['username'] = 'foobar'
@@ -113,12 +113,12 @@ class TestRegistering:
         # sees error message
         assert 'between 8 and 256' in res
 
-    def test_sees_error_message_if_user_already_registered(self, db, user, testapp):
+    def test_sees_error_message_if_user_already_registered(self, db, user, app):
         with db.session:
             user = UserFactory()  # A registered user
 
         # Goes to registration page
-        res = testapp.get(url_for('public.register'))
+        res = app.client.get(url_for('public.register'))
         # Fills out form, but username is already registered
         form = res.forms['registerForm']
         form['username'] = user.username

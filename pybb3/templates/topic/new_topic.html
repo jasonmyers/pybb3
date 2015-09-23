@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+
+{% from 'macros.html' import render_form %}
+
+{% block content %}
+    <form method="POST" action="{{ url_for('topic.new_topic') }}">
+        {{ render_form(form) }}
+        <p><input type="submit" value="Submit"></p>
+    </form>
+{% endblock %}
+
